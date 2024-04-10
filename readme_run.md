@@ -1,0 +1,1 @@
+nohup python3 -u run.py --device "cuda:0" --name "gosize5_sparse_unfreezed_Adam" > ./../logs/sparse_unfreezed_Adam.out &
