@@ -17,3 +17,4 @@ logs/
 *.json
 *.txt
 *.yaml
+src/uhler/wandb

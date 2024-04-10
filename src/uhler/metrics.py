@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader
 def compute_metrics(model_name = 'gosize5'):
 	
     # read different trained models here
-    savedir = f'../result/{model_name}' 
+    savedir = f'./../../result/{model_name}' 
 
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
         ptb_targets = pickle.load(f)
@@ -89,7 +89,7 @@ def compute_metrics(model_name = 'gosize5'):
 
     ## train 
     print("train metrics")
-    evaluate_model(fold='train') 
+    evaluate_model(fold='train')
 
     ## test
     print("test metrics")
@@ -98,7 +98,7 @@ def compute_metrics(model_name = 'gosize5'):
 def visualize_gradients(model_name = 'gosize5'):
 
     # read different trained models here
-    savedir = f'../result/{model_name}' 
+    savedir = f'./../../result/{model_name}' 
     model = torch.load(f'{savedir}/best_model.pt')
 
     # with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
@@ -107,8 +107,13 @@ def visualize_gradients(model_name = 'gosize5'):
     def plot_layer_weights(layer_name):
 
         ## get non-zero gradients
-        non_masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) != 0].detach().cpu().numpy()')
-        masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) == 0].detach().cpu().numpy()')
+        try:
+            non_masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) != 0].detach().cpu().numpy()')
+            masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) == 0].detach().cpu().numpy()')
+        except:
+            non_masked_gradients = eval(f'model.{layer_name}.weight[model.{layer_name}.weight != 0].detach().cpu().numpy()')
+            masked_gradients = eval(f'model.{layer_name}.weight[model.{layer_name}.weight == 0].detach().cpu().numpy()')
+
 
         ## Plotting the histogram
         plt.figure(figsize=(10, 6))
@@ -119,14 +124,14 @@ def visualize_gradients(model_name = 'gosize5'):
         plt.ylabel('Frequency')
         plt.title(f'Layer {layer_name} weights')
         plt.show()
-        plt.savefig(os.path.join('./..','figures',f'{model_name}_layer_{layer_name}_histplot.png'))
+        plt.savefig(os.path.join('./../..','figures',f'{model_name}_layer_{layer_name}_histplot.png'))
 
     plot_layer_weights(layer_name='fc1')
     plot_layer_weights(layer_name='fc_mean')
     plot_layer_weights(layer_name='fc_var')
 
 ## model name
-model_name = 'gosize5_sparse_unfreezed_Adam'
+model_name = 'gosize5_sparse_unfreezed_vincenzo_Adam'
 
 ## compute metrics
 compute_metrics(model_name = model_name)

@@ -59,7 +59,7 @@ def build_gene_go_relationships(dataset):
 
     ## get genes
     genes = dataset.genes
-    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
     gos = np.unique(GO_to_ensembl_id_assignment['GO_id'])
 
     go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))

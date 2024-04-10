@@ -79,6 +79,7 @@ class CMVAE(nn.Module):
 
         # encoder
         hids = z_dim * 2 #from 128 to double of the latent space dimensions
+
         """
         uncomment when using sparse layers
         """
@@ -96,17 +97,17 @@ class CMVAE(nn.Module):
         """
         uncomment when using sparse layers
         """
-        rel_latent_dict = ut.build_gene_go_relationships_latent(hids, z_dim)
-        self.fc_mean = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
-        self.fc_var = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
+        # rel_latent_dict = ut.build_gene_go_relationships_latent(hids, z_dim)
+        # self.fc_mean = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
+        # self.fc_var = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
 
         """
         comment when using sparse layers
         """
-        # self.fc_mean = nn.Linear(hids, z_dim)
-        # weights_init(self.fc_mean)
-        # self.fc_var = nn.Linear(hids, z_dim)
-        # weights_init(self.fc_var)
+        self.fc_mean = nn.Linear(hids, z_dim)
+        weights_init(self.fc_mean)
+        self.fc_var = nn.Linear(hids, z_dim)
+        weights_init(self.fc_var)
 
         # DAG matrix G (upper triangular, z_dim x z_dim). 
         # encoded as a dense matrix, where only upper triangular parts will be used

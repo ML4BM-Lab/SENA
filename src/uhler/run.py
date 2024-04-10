@@ -63,7 +63,7 @@ def main(args):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='parse args')
-	parser.add_argument('-s', '--savedir', type=str, default='../result/', help='directory to save the results')
+	parser.add_argument('-s', '--savedir', type=str, default='./../../result/', help='directory to save the results')
 	parser.add_argument('--device', type=str, default=None, help='device to run the training')
 	parser.add_argument('--model', type=str, default='cmvae', help='model to run the training')
 	parser.add_argument('--name', type=str, default=f'run{int(time.time())}', help='name of the run')

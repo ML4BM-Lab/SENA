@@ -11,7 +11,7 @@ import pandas as pd
 # map the target genes of each cell to a binary vector, using a target gene list "perturb_targets".
 # "perturb_type" specifies whether the returned object contains single trarget-gene samples, double target-gene samples, or both.
 class SCDataset(Dataset):
-    def __init__(self, datafile='./../data/Norman2019_raw.h5ad', perturb_type='single', perturb_targets=None):
+    def __init__(self, datafile='./../../data/Norman2019_raw.h5ad', perturb_type='single', perturb_targets=None):
         super(Dataset, self).__init__()
         assert perturb_type in ['single', 'double', 'both'], 'perturb_type not supported!'
 
@@ -23,8 +23,8 @@ class SCDataset(Dataset):
         """
 
         ## load gosize=5 files
-        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
-        intervention_to_GO_assignment = pd.read_csv(os.path.join('..','data','intervention_to_GO_assignment_gosize5.csv'))
+        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+        intervention_to_GO_assignment = pd.read_csv(os.path.join('..','..','data','intervention_to_GO_assignment_gosize5.csv'))
         ptb_targets = sorted(intervention_to_GO_assignment['intervention_gene_name'])
         
         # ## keep only GO_genes
