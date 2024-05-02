@@ -36,7 +36,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 	var = []
 
 	for i, X in enumerate(dataloader):
-
+		
 		x = X[0]
 		y = X[1]
 		c = X[2]

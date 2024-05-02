@@ -3,6 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
+import scanpy as sc
+import pickle
+import torch
+from inference import evaluate_single_leftout
+import pandas as pd 
+import os
 
 def draw(pdag, colored_set=set(), solved_set=set(), affected_set=set(), nw_ax=None, edge_weights=None, savefile=None, node_label=None):
     """ 
@@ -84,3 +90,52 @@ def draw_spectrum(A, B, savefile=None):
         plt.savefig(savefile)
     plt.show()
     plt.close()
+
+def visualize_data_generation(model_name = 'gosize5_orig_Adam'):
+
+    #load data
+    adata = sc.read_h5ad('./../../data/Norman2019_raw.h5ad')
+
+    with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
+        ptb_targets = pickle.load(f)
+
+    ## load gosize=5 files
+    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+
+    # keep only GO_genes
+    adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
+    ctrl_X = adata.X.toarray()
+
+    #load model
+    savedir = f'./../../result/{model_name}' 
+    model = torch.load(f'{savedir}/best_model.pt') 
+    mode = 'CMVAE'
+
+    ## generate test results
+    rmse, signerr, gt_y, pred_y, c_y, gt_x, mu, var = evaluate_single_leftout(model, savedir, model.device, mode)
+    C_y = [','.join([str(l) for l in np.where(c_y[i]!=0)[0]]) for i in range(c_y.shape[0])]
+
+    ## generate plots
+
+    all_data = np.vstack([ctrl_X, gt_y, pred_y])
+    adata_new = sc.AnnData(all_data)
+
+    #plot them
+    sc.tl.pca(adata_new, svd_solver='arpack')
+    sc.pp.neighbors(adata_new, n_neighbors=30, n_pcs=50)
+    sc.tl.umap(adata_new, min_dist=0.3) 
+    
+    #plot for each target
+    for c in set(C_y):
+        label = ['NA' for _ in range(len(ctrl_X))] + ['Actual Cells' if C_y[i]==c else 'NA' for i in range(len(C_y))] + ['Generated Cells' if C_y[i]==c else 'NA' for i in range(len(C_y))]
+        adata_new.obs['label'] = label
+        sc.pl.umap(adata_new, size=50, color=['label'], 
+                legend_fontsize=14, groups=['Actual Cells','Generated Cells'], 
+                title=ptb_targets[int(c)], 
+                palette={'Actual Cells': 'blue', 
+                            'Generated Cells': 'orange',
+                            'NA': 'grey'
+                        },
+                legend_loc=None,  
+                save=f'_test_{ptb_targets[int(c)]}_CMVAE-obs.pdf'
+                )
