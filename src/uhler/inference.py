@@ -51,6 +51,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 			c2[:,idx[1]] = 1
 		
 		with torch.no_grad():
+
 			if mode=='CMVAE':
 				if numint == 1:
 					y_hat, x_recon, z_mu, z_var, G = model(x, c, c, num_interv=1, temp=temp)
@@ -64,6 +65,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 					# u = (zinterv) @ torch.inverse(torch.eye(model.z_dim).to(model.device) -  torch.triu((model.G), diagonal=1))   
 					# y_hat = model.decode(u)
 					y_hat, x_recon, z_mu, z_var, G = model(x, c1, c2, num_interv=2, temp=temp)	
+
 			elif mode=='CVAE':
 				if numint == 1:
 					bc, csz = model.c_encode(c, temp=temp)
@@ -76,6 +78,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 					z = torch.DoubleTensor(bc.size()).normal_().to(device)
 					u = model.dag(z, bc, csz, bc2, csz2, num_interv=2)
 					y_hat = model.decode(u)	
+
 			elif mode=='CVAE-obs':
 				if numint == 1:
 					bc, csz = model.c_encode(c, temp=temp)
@@ -92,6 +95,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 					z = model.reparametrize(mu_z, var)
 					u = model.dag(z, bc, csz, bc2, csz2, num_interv=2)
 					y_hat = model.decode(u)	
+
 			elif mode=='MVAE':
 				if numint == 1:
 					y_hat, _, _, _ = model(x, c, c, num_interv=1, temp=temp)
@@ -118,14 +122,14 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 	return rmse, signerr, gt_y, pred_y, c_y, gt_x, mu, var
 
 
-def evaluate_single_leftout(model, path_to_dataloder, device, mode, temp=1):
-	with open(f'{path_to_dataloder}/test_data_single_node.pkl', 'rb') as f:
+def evaluate_single_leftout(model, path_to_dataloader, device, mode, temp=1):
+	with open(f'{path_to_dataloader}/test_data_single_node.pkl', 'rb') as f:
 		dataloader = pickle.load(f)
 
 	return evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode=mode)
 
-def evaluate_single_train(model, path_to_dataloder, device, mode, temp=1):
-	with open(f'{path_to_dataloder}/train_data.pkl', 'rb') as f:
+def evaluate_single_train(model, path_to_dataloader, device, mode, temp=1):
+	with open(f'{path_to_dataloader}/train_data.pkl', 'rb') as f:
 		dataloader = pickle.load(f)
 
 	return evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode=mode)
@@ -134,6 +138,8 @@ def evaluate_single_train(model, path_to_dataloder, device, mode, temp=1):
 def evaluate_double(model, path_to_ptbtargets, device, mode, temp=1):
 	with open(f'{path_to_ptbtargets}/ptb_targets.pkl', 'rb') as f:
 		ptb_targets = pickle.load(f)
+	##
 	dataloader, _, _, _ = get_data(mode='test', perturb_targets=ptb_targets)
 
 	return evaluate_generated_samples(model, dataloader, device, temp, numint=2, mode=mode)
+

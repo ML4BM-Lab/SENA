@@ -43,6 +43,8 @@ def compute_metrics(model_name = 'gosize5'):
             rmse, signerr, gt_y, pred_y, c_y, gt_x, mu, var = evaluate_single_leftout(model, savedir, model.device, mode)
         elif fold == 'train':
             rmse, signerr, gt_y, pred_y, c_y, gt_x, mu, var = evaluate_single_train(model, savedir, model.device, mode)
+        elif fold == 'double':
+            rmse, signerr, gt_y, pred_y, c_y, gt_x, mu, var = evaluate_double(model, savedir, model.device, mode, temp=1)
 
         C_y = [','.join([str(l) for l in np.where(c_y[i]!=0)[0]]) for i in range(c_y.shape[0])]
 
@@ -95,14 +97,18 @@ def compute_metrics(model_name = 'gosize5'):
     print("test metrics")
     evaluate_model(fold='test')
 
+    ## doubles
+    print("double metrics")
+    evaluate_model(fold="double")
+
 def visualize_gradients(model_name = 'gosize5'):
 
     # read different trained models here
     savedir = f'./../../result/{model_name}' 
     model = torch.load(f'{savedir}/best_model.pt')
 
-    # with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
-    #     ptb_targets = pickle.load(f)
+    with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
+        ptb_targets = pickle.load(f)
 
     def plot_layer_weights(layer_name):
 

@@ -13,7 +13,7 @@ from collections import defaultdict
 ## MMD LOSS
 class MMD_loss(nn.Module):
     def __init__(self, kernel_mul = 2.0, kernel_num = 5, fix_sigma=None):
-        super(MMD_loss, self).__init__()
+        super().__init__()
         self.kernel_num = kernel_num
         self.kernel_mul = kernel_mul
         self.fix_sigma = fix_sigma
@@ -87,7 +87,7 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         dataset = SCDataset(perturb_type='double', perturb_targets=perturb_targets)
 
     ptb_genes = dataset.ptb_targets
-        
+    
     if mode == 'train':
         dataset1 = Subset(dataset, train_idx)
         ptb_name = dataset.ptb_names[train_idx]
@@ -104,9 +104,10 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         ptb_name = dataset.ptb_names[test_idx]
         dataloader2 = DataLoader(
             dataset2,
-            batch_sampler=SCDATA_sampler(dataset2, batch_size, ptb_name),
+            batch_sampler=SCDATA_sampler(dataset2, 8, ptb_name), #using 8 coz 20% of cells somtimes is lower than 128 and it drops that gene
             num_workers=0
         )
+
         return dataloader, dataloader2, dim, cdim, ptb_genes
     else:	
         dataloader = DataLoader(
@@ -197,6 +198,7 @@ def split_scdata(scdataset, split_ptbs, batch_size=32):
     test_idx = []
     for ptb in split_ptbs:
         idx = list(np.where(scdataset.ptb_names == ptb)[0])
+        #print(f"{ptb} - {idx}")
         test_idx.append(np.random.choice(idx, int(len(idx)*pct), replace=False))
         #test_idx.append(idx[0:num_sample])
 

@@ -38,7 +38,7 @@ class SCDataset(Dataset):
         #     ptb_targets = perturb_targets
 
         self.ptb_targets = ptb_targets
-
+        
         if perturb_type == 'single':
             
             ptb_adata = adata[(~adata.obs['guide_ids'].str.contains(',')) & (adata.obs['guide_ids']!='')].copy()
@@ -53,7 +53,11 @@ class SCDataset(Dataset):
 
         elif perturb_type == 'double':
 
-            ptb_adata = adata[adata.obs['guide_ids'].str.contains(',')].copy()
+            ptb_adata = adata[(adata.obs['guide_ids'].str.contains(',')) & (adata.obs['guide_ids']!='')].copy()
+
+            #keep only cells containing our perturbed genes
+            ptb_adata = ptb_adata[ptb_adata.obs['guide_ids'].apply(lambda x: all([y in ptb_targets for y in x.split(',')])), :]
+
             self.ptb_samples = ptb_adata.X
             self.ptb_names = ptb_adata.obs['guide_ids'].values
             self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)
