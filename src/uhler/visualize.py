@@ -207,7 +207,7 @@ def visualize_data_generation_comparison(model_names = ['gosize5_orig_Adam']):
                 save=f'_test_{ptb_targets[int(c)]}_CMVAE-obs_comparison.png'
                 )
 
-def visualize_data_generation_double_comparison(model_names = ['gosize5_orig_Adam']):
+def visualize_data_generation_double_comparison(model_names = ['gosize5_orig_Adam'], single_val_names = []):
     
     def retrieve_single_run(model_name):
 
@@ -258,6 +258,10 @@ def visualize_data_generation_double_comparison(model_names = ['gosize5_orig_Ada
 
     #plot for each target
     for c in set(C_y):
+
+        # g1, g2 = c.split(',')
+        # if ptb_targets[int(g1)] not in single_val_names and ptb_targets[int(g2)] not in single_val_names:
+        #     continue
         
         legend_groups = []
         for mn in model_names:
@@ -278,6 +282,11 @@ def visualize_data_generation_double_comparison(model_names = ['gosize5_orig_Ada
 
 
 ## single perturbations
+single_val_names = ['FOXF1', 'PRDM1', 'HK2', 'RHOXF2', 'ZNF318', 'CEBPA', 'JUN', 'LHX1', 'CSRNP1', 'MAP7D1', 'CDKN1C', 'NIT1']
 model_names = ['gosize5_orig_Adam', 'gosize5_sparse_unfreezed_NA_Adam', 'gosize5_sparse_unfreezed_vincenzo_Adam']
-visualize_data_generation_comparison(model_names)
+
+## single
+#visualize_data_generation_comparison(model_names)
+
+## double
 visualize_data_generation_double_comparison(model_names)
