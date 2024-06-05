@@ -59,7 +59,9 @@ def build_gene_go_relationships(dataset):
 
     ## get genes
     genes = dataset.genes
-    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+    #GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_filt2_gene_map.tsv'),sep='\t')
+    GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
     gos = np.unique(GO_to_ensembl_id_assignment['GO_id'])
 
     go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
@@ -79,7 +81,7 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         train_idx, test_idx = split_scdata(
             dataset, 
             #split_ptbs=['KLF1', 'BAK1', 'CEBPE', 'UBASH3B', 'ETS2', 'OSR2', 'SLC4A1','SET', 'ELMSAN1', 'MAP2K6', 'FOXF1', 'C19orf26', 'FOXA1','UBASH3A'],
-            split_ptbs = ['FOXF1', 'PRDM1', 'HK2', 'RHOXF2', 'ZNF318', 'CEBPA', 'JUN', 'LHX1', 'CSRNP1', 'MAP7D1', 'CDKN1C', 'NIT1'],
+            split_ptbs = ['FOXF1', 'PRDM1', 'HK2', 'ZNF318', 'CEBPA', 'JUN', 'LHX1', 'CSRNP1', 'MAP7D1', 'CDKN1C', 'NIT1'],
             batch_size=batch_size
         ) # leave out some cells from the top 12 single target-gene interventions
     elif mode == 'test':

@@ -23,9 +23,15 @@ class SCDataset(Dataset):
         """
 
         ## load gosize=5 files
-        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
-        intervention_to_GO_assignment = pd.read_csv(os.path.join('..','..','data','intervention_to_GO_assignment_gosize5.csv'))
-        ptb_targets = sorted(intervention_to_GO_assignment['intervention_gene_name'])
+        #GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
+        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_filt2_gene_map.tsv'),sep='\t')
+        GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
+
+        #intervention_to_GO_assignment = pd.read_csv(os.path.join('..','..','data','intervention_to_GO_assignment_gosize5.csv'))
+        #ptb_targets = sorted(intervention_to_GO_assignment['intervention_gene_name'])
+
+        intervention_to_GO_assignment_genes = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways', 'z_2_interventions.csv')).columns[1:].tolist()
+        ptb_targets = intervention_to_GO_assignment_genes
         
         # ## keep only GO_genes
         adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]

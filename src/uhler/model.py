@@ -112,7 +112,7 @@ class SparseGO_NetActivity(torch.nn.Module):
 # "dim" specifies the sample dimension; "c_dim" specifies the dimension of the intervention encoding.
 #  "z_dim" specifies the dimension of the latent space.
 class CMVAE(nn.Module):
-    def __init__(self, dim, z_dim, c_dim, dataloader = None, device=None):
+    def __init__(self, dim, z_dim, c_dim, dataloader = None, device=None, mode = 'regular'):
 
         super(CMVAE, self).__init__()
 
@@ -130,34 +130,32 @@ class CMVAE(nn.Module):
         # encoder
         hids = z_dim * 2 #from 128 to double of the latent space dimensions
 
-        """
-        uncomment when using sparse layers
-        """
-        dataset = dataloader.dataset.dataset
-        gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
-        self.fc1 = SparseGO_NetActivity(self.dim, hids, z_dim, rel_dict, device=device)
+        if mode == 'regular':
 
-        """
-        comment when using sparse layers
-        """
-        #self.fc1 = nn.Linear(self.dim, hids)
-        #weights_init(self.fc1)
+            self.fc1 = nn.Linear(self.dim, hids)
+            weights_init(self.fc1)
 
-        #build relationships
-        """
-        uncomment when using sparse layers
-        """
-        # rel_latent_dict = ut.build_gene_go_relationships_latent(hids, z_dim)
-        # self.fc_mean = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
-        # self.fc_var = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
+            self.fc_mean = nn.Linear(hids, z_dim)
+            weights_init(self.fc_mean)
+            self.fc_var = nn.Linear(hids, z_dim)
+            weights_init(self.fc_var)
 
-        """
-        comment when using sparse layers
-        """
-        self.fc_mean = nn.Linear(hids, z_dim)
-        weights_init(self.fc_mean)
-        self.fc_var = nn.Linear(hids, z_dim)
-        weights_init(self.fc_var)
+        elif mode == 'NA':
+        
+            dataset = dataloader.dataset.dataset
+            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
+            self.fc1 = SparseGO_NetActivity(self.dim, hids, z_dim, rel_dict, device=device)
+
+            rel_latent_dict = ut.build_gene_go_relationships_latent(hids, z_dim)
+            self.fc_mean = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
+            self.fc_var = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
+
+        elif mode == 'NA+deltas':
+
+            dataset = dataloader.dataset.dataset
+            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
+            self.fc1 = SparseGO_NetActivity(self.dim, hids, z_dim, rel_dict, device=device)
+
 
         # DAG matrix G (upper triangular, z_dim x z_dim). 
         # encoded as a dense matrix, where only upper triangular parts will be used
