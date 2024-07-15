@@ -40,7 +40,8 @@ def train(
             z_dim = opts.latdim,
             c_dim = opts.cdim,
             device = device, 
-            dataloader = dataloader
+            dataloader = dataloader,
+            mode = opts.trainmode
         )
 
         # for name, param in cmvae.named_parameters():

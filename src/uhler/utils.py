@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import Sampler
 from dataset import SCDataset, SimuDataset
 from collections import defaultdict
+from tqdm import tqdm
 
 ## MMD LOSS
 class MMD_loss(nn.Module):
@@ -55,20 +56,36 @@ def build_gene_go_relationships_latent(in_dim, out_dim):
             rel_dict[mult*i+j].append(i)
     return rel_dict
 
+def build_gene_go_relationships_latent_deltas(gos):
+
+    go_to_zs = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))
+
+    #init relationships dict
+    rel_dict = defaultdict(list)
+    gos = list(gos)
+
+    ###
+    for go, z in zip(go_to_zs['GO'], go_to_zs['Z']):
+        rel_dict[gos.index(go)].append(z-1)
+    
+    return rel_dict
+
 def build_gene_go_relationships(dataset):
 
     ## get genes
     genes = dataset.genes
+
     #GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
-    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_filt2_gene_map.tsv'),sep='\t')
+    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
     GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
-    gos = np.unique(GO_to_ensembl_id_assignment['GO_id'])
+    gos = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))['GO'].values.tolist()
 
     go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
     rel_dict = defaultdict(list)
 
-    for go, gen in zip(GO_to_ensembl_id_assignment['GO_id'], GO_to_ensembl_id_assignment['ensembl_id']):
-        rel_dict[gen_dict[gen]].append(go_dict[go])
+    for go, gen in tqdm(zip(GO_to_ensembl_id_assignment['GO_id'], GO_to_ensembl_id_assignment['ensembl_id']), total = GO_to_ensembl_id_assignment.shape[0]):
+        if (gen in genes) and (go in gos):
+            rel_dict[gen_dict[gen]].append(go_dict[go])
 
     return gos, genes, rel_dict
 

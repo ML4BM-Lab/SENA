@@ -9,7 +9,7 @@ from tqdm import tqdm
 import os
 
 filterwarnings('ignore')
-sys.path.append('../src')
+sys.path.append('./../src')
 
 import scanpy as sc
 sc.settings.verbosity = 3
@@ -17,6 +17,7 @@ sc.settings.set_figure_params(dpi=80, facecolor='white', frameon=False)
 
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
+import pandas as pd
 
 from inference import *
 from utils import SCDATA_sampler, MMD_loss
@@ -89,17 +90,39 @@ def compute_metrics(model_name = 'gosize5'):
         rmse_std = np.std([i[0] for i in rmse_loss_summary.values()])/np.sqrt(len(rmse_loss_summary.keys()))
         print(f"{fold} rmse {round(rmse_mean,4)} +- {round(rmse_std,4)}")
 
+        # Prepare data in the format mean ± std
+        data = {
+            'Metric': ['mmd', 'r2', 'rmse'],
+            'Values': [
+                f"{round(mmd_mean, 4)} ± {round(mmd_std, 4)}",
+                f"{round(r2_mean, 4)} ± {round(r2_std, 4)}",
+                f"{round(rmse_mean, 4)} ± {round(rmse_std, 4)}"
+            ]
+        }
+
+        # Create DataFrame
+        df = pd.DataFrame(data)
+
+        return df
+
     ## train 
     print("train metrics")
-    evaluate_model(fold='train')
+    df_train = evaluate_model(fold='train')
+    df_train['mode'] = 'train'
 
     ## test
     print("test metrics")
-    evaluate_model(fold='test')
+    df_test = evaluate_model(fold='test')
+    df_test['mode'] = 'test'
 
     ## doubles
     print("double metrics")
-    evaluate_model(fold="double")
+    df_double = evaluate_model(fold="double")
+    df_double['mode'] = 'double'
+
+    ## concat
+    df = pd.concat([df_train, df_test, df_double]).reset_index(drop=True)
+    df.to_csv(os.path.join('./../../','result', model_name, f'{model_name}_mmd_r2_rmse.tsv'),sep='\t')
 
 def visualize_gradients(model_name = 'gosize5'):
 
@@ -110,7 +133,7 @@ def visualize_gradients(model_name = 'gosize5'):
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
         ptb_targets = pickle.load(f)
 
-    def plot_layer_weights(layer_name):
+    def plot_layer_weights(layer_name, model):
 
         ## get non-zero gradients
         try:
@@ -130,14 +153,14 @@ def visualize_gradients(model_name = 'gosize5'):
         plt.ylabel('Frequency')
         plt.title(f'Layer {layer_name} weights')
         plt.show()
-        plt.savefig(os.path.join('./../..','figures',f'{model_name}_layer_{layer_name}_histplot.png'))
+        plt.savefig(os.path.join('./../../','result', model_name, f'{model_name}_layer_{layer_name}_histplot.png'))
 
-    plot_layer_weights(layer_name='fc1')
-    plot_layer_weights(layer_name='fc_mean')
-    plot_layer_weights(layer_name='fc_var')
+    plot_layer_weights(layer_name='fc1', model=model)
+    plot_layer_weights(layer_name='fc_mean', model=model)
+    plot_layer_weights(layer_name='fc_var', model=model)
 
 ## model name
-model_name = 'gosize5_sparse_unfreezed_vincenzo_Adam'
+model_name = 'full_go_NA+deltas'
 
 ## compute metrics
 compute_metrics(model_name = model_name)

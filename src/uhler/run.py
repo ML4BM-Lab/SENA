@@ -26,8 +26,9 @@ def main(args):
 		MMD_sigma = 1000,
 		kernel_num = 10,
 		matched_IO = False,
-		latdim = None,
-		seed = 12
+		latdim = 30, #our assumption
+		seed = 12,
+		trainmode = args.trainmode
 	)
 
 	torch.manual_seed(opts.seed)
@@ -55,8 +56,10 @@ def main(args):
 
 	if args.model == 'cmvae':
 		train(dataloader, opts, args.device, args.savedir, log=True)
+
 	elif args.model == 'cvae':
 		train_CVAE(dataloader, opts, args.device, args.savedir, log=True)
+
 	elif args.model == 'mvae':
 		train_MVAE(dataloader, opts, args.device, args.savedir, log=True) 
 
@@ -67,6 +70,7 @@ if __name__ == '__main__':
 	parser.add_argument('--device', type=str, default=None, help='device to run the training')
 	parser.add_argument('--model', type=str, default='cmvae', help='model to run the training')
 	parser.add_argument('--name', type=str, default=f'run{int(time.time())}', help='name of the run')
+	parser.add_argument('--trainmode', type = str, default = 'orig')
 	args = parser.parse_args()
 	
 	args.savedir = args.savedir + args.name
