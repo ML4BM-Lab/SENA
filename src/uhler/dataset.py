@@ -26,18 +26,25 @@ class SCDataset(Dataset):
         """
        
         # load gos from NA paper
+        ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
+        ensembl_genename_mapping = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
         GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
         GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
 
         #load GOs
-        go_2_z_post_heuristic = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))['GO'].values
-        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(go_2_z_post_heuristic)]
+        #go_2_z_post_heuristic = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))['GO'].values
+        go_2_z_raw = pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')
+        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(go_2_z_raw['PathwayID'].values)]
 
         ## load interventions
-        intervention_to_GO_assignment_genes = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways', 'z_2_interventions.csv')).columns[1:].tolist()
-        ptb_targets = intervention_to_GO_assignment_genes
+        print(f"zs: {set(go_2_z_raw['topGO'])}, number of zs : {len(set(go_2_z_raw['topGO']))}")
+        #intervention_to_GO_assignment_genes = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways', 'z_2_interventions.csv')).columns[1:].tolist()
+        #ptb_targets = intervention_to_GO_assignment_genes
+        intervention_genenames = map(lambda x: ensembl_genename_mapping.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
+        ptb_targets = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
         
         # ## keep only GO_genes
+        print(f"number of intervention genes: {ptb_targets}")
         adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
         self.genes = adata.var.index.tolist()
         

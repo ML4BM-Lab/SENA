@@ -26,7 +26,7 @@ def main(args):
 		MMD_sigma = 1000,
 		kernel_num = 10,
 		matched_IO = False,
-		latdim = 30, #our assumption
+		latdim = 16, #our assumption
 		seed = 12,
 		trainmode = args.trainmode
 	)

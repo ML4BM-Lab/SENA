@@ -58,14 +58,18 @@ def build_gene_go_relationships_latent(in_dim, out_dim):
 
 def build_gene_go_relationships_latent_deltas(gos):
 
-    go_to_zs = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))
+    #go_to_zs = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))
+    go_2_z_raw = pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')
+    numbered_zs = dict(zip(sorted(set(go_2_z_raw['topGO'])), range(16)))
+    go_2_z_raw.columns = ['GO', 'Z_name']
+    go_2_z_raw['Z'] = go_2_z_raw['Z_name'].apply(lambda x: numbered_zs[x])
 
     #init relationships dict
     rel_dict = defaultdict(list)
     gos = list(gos)
 
     ###
-    for go, z in zip(go_to_zs['GO'], go_to_zs['Z']):
+    for go, z in zip(go_2_z_raw['GO'], go_2_z_raw['Z']):
         rel_dict[gos.index(go)].append(z-1)
     
     return rel_dict
@@ -78,7 +82,8 @@ def build_gene_go_relationships(dataset):
     #GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','GO_to_ensembl_id_assignment_gosize5.csv'))
     GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
     GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
-    gos = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))['GO'].values.tolist()
+    ##gos = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_2_z_post_heuristic.csv'))['GO'].values.tolist()
+    gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
 
     go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
     rel_dict = defaultdict(list)
@@ -98,7 +103,7 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         train_idx, test_idx = split_scdata(
             dataset, 
             #split_ptbs=['KLF1', 'BAK1', 'CEBPE', 'UBASH3B', 'ETS2', 'OSR2', 'SLC4A1','SET', 'ELMSAN1', 'MAP2K6', 'FOXF1', 'C19orf26', 'FOXA1','UBASH3A'],
-            split_ptbs = ['FOXF1', 'PRDM1', 'HK2', 'ZNF318', 'CEBPA', 'JUN', 'LHX1', 'CSRNP1', 'MAP7D1', 'CDKN1C', 'NIT1'],
+            split_ptbs = ['ETS2', 'SGK1', 'POU3F2', 'TBX2', 'CBL', 'MAPK1', 'CDKN1C', 'S1PR2', 'PTPN1', 'MAP2K6', 'COL1A1'],
             batch_size=batch_size
         ) # leave out some cells from the top 12 single target-gene interventions
     elif mode == 'test':
