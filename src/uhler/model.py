@@ -107,7 +107,6 @@ class SparseGO_NetActivity(torch.nn.Module):
             bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
             nn.init.uniform_(self.bias, -bound, bound)
 
-
 # VAE model with causal layer and mmd loss
 # "dim" specifies the sample dimension; "c_dim" specifies the dimension of the intervention encoding.
 #  "z_dim" specifies the dimension of the latent space.
@@ -138,19 +137,7 @@ class CMVAE(nn.Module):
             self.fc_var = nn.Linear(hids, z_dim)
             weights_init(self.fc_var)
 
-        # elif mode == 'NA':
-        
-        #     # encoder
-        #     hids = z_dim * 2 #from 128 to double of the latent space dimensions
-        #     dataset = dataloader.dataset.dataset
-        #     gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
-        #     self.fc1 = SparseGO_NetActivity(self.dim, hids, z_dim, rel_dict, device=device)
-
-        #     rel_latent_dict = ut.build_gene_go_relationships_latent(hids, z_dim)
-        #     self.fc_mean = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
-        #     self.fc_var = SparseGO_NetActivity(hids, z_dim, z_dim, rel_latent_dict, device=device)
-
-        elif mode == 'NA+deltas':
+        elif mode == 'NA_NA':
 
             #hids = z_dim * 2 #from 128 to double of the latent space dimensions
             dataset = dataloader.dataset.dataset
@@ -162,6 +149,21 @@ class CMVAE(nn.Module):
             rel_latent_dict = ut.build_gene_go_relationships_latent_deltas(gos)
             self.fc_mean = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
             self.fc_var = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
+
+        elif mode == 'NA+deltas':
+
+            #hids = z_dim * 2 #from 128 to double of the latent space dimensions
+            dataset = dataloader.dataset.dataset
+            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
+
+            #first, connect initial gene space to gene sets
+            self.fc1 = SparseGO_NetActivity(self.dim, len(gos), len(gos), rel_dict, device=device)
+
+            #now MLPs
+            self.fc_mean = nn.Linear(len(gos), z_dim)
+            weights_init(self.fc_mean)
+            self.fc_var = nn.Linear(len(gos), z_dim)
+            weights_init(self.fc_var)
 
 
         # DAG matrix G (upper triangular, z_dim x z_dim). 

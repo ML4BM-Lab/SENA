@@ -26,7 +26,7 @@ def main(args):
 		MMD_sigma = 1000,
 		kernel_num = 10,
 		matched_IO = False,
-		latdim = 16, #our assumption
+		latdim = args.latdim, #our assumption 16
 		seed = 12,
 		trainmode = args.trainmode
 	)
@@ -63,7 +63,6 @@ def main(args):
 	elif args.model == 'mvae':
 		train_MVAE(dataloader, opts, args.device, args.savedir, log=True) 
 
-
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='parse args')
 	parser.add_argument('-s', '--savedir', type=str, default='./../../result/', help='directory to save the results')
@@ -71,6 +70,7 @@ if __name__ == '__main__':
 	parser.add_argument('--model', type=str, default='cmvae', help='model to run the training')
 	parser.add_argument('--name', type=str, default=f'run{int(time.time())}', help='name of the run')
 	parser.add_argument('--trainmode', type = str, default = 'orig')
+	parser.add_argument('--latdim', type = int, default = 16)
 	args = parser.parse_args()
 	
 	args.savedir = args.savedir + args.name

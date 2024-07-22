@@ -85,8 +85,8 @@ def load_data_raw_go(ptb_targets):
 
 ##load our model
 mode_type = 'raw_go'
-trainmode = 'NA+deltas'
-layertype = 'zs'
+trainmode = 'NA_NA'
+layertype = 'fc_var'
 model_name = f'{mode_type}_{trainmode}'
 savedir = f'./../../result/{model_name}' 
 model = torch.load(f'{savedir}/best_model.pt')
@@ -102,13 +102,25 @@ for gene in tqdm(idx_dict, desc = 'generating activity score for perturbations')
     idx = idx_dict[gene]
     mat = torch.from_numpy(adata.X[idx,:].todense()).to('cuda').double()
 
-    if layertype == 'genesets':
+    if layertype == 'fc1':
         colnames = gos
         na_score = model.fc1(mat).detach().cpu().numpy()
 
-    elif layertype == 'zs':
-        colnames = zs
+    elif layertype == 'fc_mean':
         na_score = model.fc_mean(model.fc1(mat)).detach().cpu().numpy()
+        colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
+    elif layertype == 'fc_var':
+        na_score = model.fc_var(model.fc1(mat)).detach().cpu().numpy()
+        colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
+    elif layertype == 'z':
+
+        mu, var = model.encode(mat)
+        z = model.reparametrize(mu, var).detach().cpu().numpy()
+        na_score = z
+        colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
 
     ##
     na_score_df = pd.DataFrame(na_score)

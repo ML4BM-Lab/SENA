@@ -17,41 +17,10 @@ from utils import get_data
 import utils as ut
 
 ## load our model
-layer_name = 'fc_mean'
+layer_name = 'fc1'
 mode_type = 'raw_go'
 trainmode = 'NA+deltas'
 model_name = f'{mode_type}_{trainmode}'
-
-def analyze_sparse_layers():
-
-    """
-    analyze the sparse layers 
-    """
-
-    model_name = f'{mode_type}_{trainmode}'
-    savedir = f'./../../result/{model_name}' 
-    model = torch.load(f'{savedir}/best_model.pt')
-
-    batch_size, mode = 128, 'train'
-    dataloader, _, _, _, _ = get_data(batch_size=batch_size, mode=mode)
-    gos, _, rel_dict = ut.build_gene_go_relationships(dataloader.dataset.dataset)
-    if layer_name != 'fc1':
-        rel_dict = ut.build_gene_go_relationships_latent_deltas(gos)
-
-    non_masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) != 0].detach().cpu().numpy()')
-    masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) == 0].detach().cpu().numpy()')
-    assert non_masked_gradients.shape[0] == sum([len(rel_dict[x]) for x in rel_dict])
-
-    ## Plotting the histogram
-    plt.figure(figsize=(10, 6))
-    plt.hist(non_masked_gradients, bins=30, alpha=0.5, label='Non-masked values')
-    plt.hist(masked_gradients, bins=30, alpha=0.5, label='Masked values')
-    plt.legend()
-    plt.yscale('log')
-    plt.xlabel('Value')
-    plt.ylabel('Frequency')
-    plt.title(f'Layer {layer_name} weights - model {model_name}')
-    plt.savefig(os.path.join('..','..','figures','uhler_paper','activation_scores', model_name, f'layer_{layer_name}_masked_vs_non_masked_histplot.png'))
 
 """
 analyze activity scores numerically
@@ -107,9 +76,6 @@ for knockout in tqdm(set(na_activity_score['type'])):
 ttest_df = pd.DataFrame(ttest_df)
 ttest_df.columns = ['knockout','geneset','pval']
 
-def analyze_single_knockout_pvals(knockout = 'CDKN1A'):
-
-    ttest_df[ttest_df['knockout'] == knockout][['geneset','pval']]
 
 ## load genesets-genes mapping
 db_gene_go_map = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
