@@ -84,7 +84,7 @@ def load_data_raw_go(ptb_targets):
     return adata, perturbations_idx_dict, sorted(set(go_2_z_raw['PathwayID'].values)), sorted(set(go_2_z_raw['topGO'].values)) 
 
 ##load our model
-mode_type = 'raw_go'
+mode_type = 'full_go'
 trainmode = 'NA_NA'
 layertype = 'fc_var'
 model_name = f'{mode_type}_{trainmode}'

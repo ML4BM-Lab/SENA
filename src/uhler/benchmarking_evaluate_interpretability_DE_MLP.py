@@ -18,8 +18,8 @@ from utils import get_data
 import utils as ut
 
 ## load our model
-mode_type = 'raw_go'
-trainmode = 'NA+deltas'
+mode_type = 'full_go'
+trainmode = 'NA_NA'
 model_name = f'{mode_type}_{trainmode}'
 
 """
@@ -109,6 +109,6 @@ def analyze_latent_factor_relationship(layer_name):
 
 ##
 #analyze_latent_factor_relationship(layer_name = 'fc1')
-analyze_latent_factor_relationship(layer_name = 'fc_mean')
-analyze_latent_factor_relationship(layer_name = 'fc_var')
+# analyze_latent_factor_relationship(layer_name = 'fc_mean')
+# analyze_latent_factor_relationship(layer_name = 'fc_var')
 analyze_latent_factor_relationship(layer_name = 'z')

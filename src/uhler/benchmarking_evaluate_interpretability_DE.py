@@ -18,7 +18,7 @@ import utils as ut
 
 ## load our model
 layer_name = 'fc1'
-mode_type = 'raw_go'
+mode_type = 'full_go'
 trainmode = 'NA+deltas'
 model_name = f'{mode_type}_{trainmode}'
 

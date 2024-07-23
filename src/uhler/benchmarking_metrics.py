@@ -225,10 +225,10 @@ def visualize_gradients(model_name = 'gosize5'):
     plot_weight_heatmap(layer_name='fc_var', model=model, fpath=fpath)
 
 ## model name
-model_name = 'raw_go_NA_NA'
+model_name = 'full_go_regular'
 
 ## compute metrics
 compute_metrics(model_name = model_name)
 
 ## visualize gradients
-visualize_gradients(model_name = model_name) 
+#visualize_gradients(model_name = model_name) 

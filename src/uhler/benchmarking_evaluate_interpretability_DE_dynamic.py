@@ -25,7 +25,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         
         return model
 
-    def modify_model(model):
+    def get_affected_zs_and_genesets():
 
         rel_latent_dict = ut.build_gene_go_relationships_latent_deltas(gos)
 
@@ -42,7 +42,13 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         belonging_genesets = [geneset for geneset in gos if geneset in gene_go_dict[knockout_ensembl]]
         affected_zs = sorted(set(sum([rel_latent_dict[np.where(np.array(gos) == belonging_go)[0][0]] for belonging_go in belonging_genesets], [])))
         affected_zs = [zs[i] for i in affected_zs]
-    
+
+        return affected_zs, belonging_genesets
+
+    def modify_model(model):
+
+        affected_zs, belonging_genesets = get_affected_zs_and_genesets()
+
         """
         modify the fc_mean matrix to check where the significancy is lost
         """    
@@ -224,10 +230,10 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         plt.savefig(os.path.join(fpath, f'layer_{layer_name}_boxplot_plus_scatterplot_{name}.png'))
 
     ## load info
-    mode_type = 'raw_go'
+    mode_type = 'full_go'
     trainmode = 'NA+deltas'
     
-    fpath = os.path.join('./../../','figures','uhler_paper','activation_scores',f'{mode_type}_{trainmode}', target_knockout)
+    fpath = os.path.join('./../../','figures','uhler_paper',f'{mode_type}_{trainmode}', target_knockout)
     if not os.path.isdir(fpath):
         os.mkdir(fpath)
 
@@ -236,18 +242,21 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
     dataloader, _, _, _, ptb_targets = get_data(batch_size=batch_size, mode=mode)
     adata, idx_dict, gos, zs = load_data_raw_go(ptb_targets)
 
-    ## fc_mean / zs
-    layer_name = 'fc_mean'
-    model, affected_zs, affected_genesets = modify_model(load_model(layertype = 'zs', layer_name = 'fc_mean'))
-    na_activity_score_fc_mean = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
-    ctrl_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == 'ctrl']
-    knockout_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == target_knockout]
-    knockout_cells_fc_mean_mod = compute_activity_scores(model, layertype = 'zs')
-    pvalues_df_fc_mean, ranking_df_fc_mean = compute_pvalues_and_median_rank(ctrl_cells_fc_mean_raw, knockout_cells_fc_mean_raw, knockout_cells_fc_mean_mod, affected_zs)
-    plot_activation_scores(ctrl_cells_fc_mean_raw, knockout_cells_fc_mean_raw, knockout_cells_fc_mean_mod, pvalues_df_fc_mean, name = target_knockout)
+    if trainmode == 'NA_NA':
+
+        ## fc_mean / zs
+        layer_name = 'fc_mean'
+        model, affected_zs, affected_genesets = modify_model(load_model(layertype = 'zs', layer_name = 'fc_mean'))
+        na_activity_score_fc_mean = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
+        ctrl_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == 'ctrl']
+        knockout_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == target_knockout]
+        knockout_cells_fc_mean_mod = compute_activity_scores(model, layertype = 'zs')
+        pvalues_df_fc_mean, ranking_df_fc_mean = compute_pvalues_and_median_rank(ctrl_cells_fc_mean_raw, knockout_cells_fc_mean_raw, knockout_cells_fc_mean_mod, affected_zs)
+        plot_activation_scores(ctrl_cells_fc_mean_raw, knockout_cells_fc_mean_raw, knockout_cells_fc_mean_mod, pvalues_df_fc_mean, name = target_knockout)
 
     ## fc1 / genesets
     layer_name = 'fc1'
+    affected_zs, affected_genesets = get_affected_zs_and_genesets()
     na_activity_score_fc1 = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
     ctrl_cells_fc1 = na_activity_score_fc1[na_activity_score_fc1['type'] == 'ctrl']
     knockout_cells_fc1 = na_activity_score_fc1[na_activity_score_fc1['type'] == target_knockout]

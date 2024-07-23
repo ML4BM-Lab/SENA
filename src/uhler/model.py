@@ -126,20 +126,20 @@ class CMVAE(nn.Module):
         self.c_dim = c_dim
         self.dim = dim
 
-        hids = 128
-
         if mode == 'regular':
 
-            self.fc1 = nn.Linear(self.dim, hids)
+            dataset = dataloader.dataset.dataset
+            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
+
+            self.fc1 = nn.Linear(self.dim, len(gos))
             weights_init(self.fc1)
-            self.fc_mean = nn.Linear(hids, z_dim)
+            self.fc_mean = nn.Linear(len(gos), z_dim)
             weights_init(self.fc_mean)
-            self.fc_var = nn.Linear(hids, z_dim)
+            self.fc_var = nn.Linear(len(gos), z_dim)
             weights_init(self.fc_var)
 
         elif mode == 'NA_NA':
 
-            #hids = z_dim * 2 #from 128 to double of the latent space dimensions
             dataset = dataloader.dataset.dataset
             gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
 
@@ -171,6 +171,7 @@ class CMVAE(nn.Module):
         self.G = torch.nn.Parameter(torch.normal(0, .1, size = (self.z_dim,self.z_dim)))
         
         # C encoder
+        hids = 128
         self.c1 = nn.Linear(self.c_dim, hids)
         self.c2 = nn.Linear(hids, self.z_dim)
         self.c_shift = nn.Parameter(torch.ones(self.c_dim))
