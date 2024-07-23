@@ -213,11 +213,14 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 
         # Boxplot for activation scores
-        activation_data = mean_scores_plus_pvals[['ctrl_activation_score', 'knockout_activation_score']]
-        sns.boxplot(data=activation_data, ax=axs[0])
+        act_aff_knockout = pd.melt(knockout_cells[affected_genesets])
+        act_aff_knockout['cell'] = 'knockout'
+        acf_aff_ctrl = pd.melt(ctrl_cells[affected_genesets])
+        acf_aff_ctrl['cell'] = 'ctrl'             
+        activation_affected = pd.concat([act_aff_knockout, acf_aff_ctrl])
+        sns.boxplot(data=activation_affected, x = 'variable', y = 'value', hue = 'cell', ax=axs[0])
         axs[0].set_title(f'Boxplot of Activation Scores - Knockout {name}')
-        axs[0].set_xticklabels(['Control Activation Score', 'Knockout Activation Score'])
-
+        
         # Scatter plot for p-values
         sns.scatterplot(x=mean_scores_plus_pvals.index, y='pval', hue='affected', data=mean_scores_plus_pvals, ax=axs[1], palette=['blue', 'red'])
         axs[1].set_yscale('log')
@@ -226,14 +229,19 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         axs[1].set_ylabel('p-value')
         axs[1].set_xticks([])
 
+        # Annotate red (affected) points with GO terms
+        for i, row in mean_scores_plus_pvals.iterrows():
+            if row['affected'] == 1:
+                plt.annotate(row.name, (i, row['pval']), textcoords="offset points", xytext=(0,10), ha='center', fontsize=9, color='red')
+
         plt.tight_layout()
         plt.savefig(os.path.join(fpath, f'layer_{layer_name}_boxplot_plus_scatterplot_{name}.png'))
 
     ## load info
     mode_type = 'full_go'
-    trainmode = 'NA+deltas'
+    trainmode = 'NA_NA'
     
-    fpath = os.path.join('./../../','figures','uhler_paper',f'{mode_type}_{trainmode}', target_knockout)
+    fpath = os.path.join('./../../','figures','uhler_paper',f'{mode_type}_{trainmode}','activation_scores', target_knockout)
     if not os.path.isdir(fpath):
         os.mkdir(fpath)
 
