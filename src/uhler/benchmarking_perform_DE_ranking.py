@@ -17,12 +17,12 @@ from utils import get_data
 import utils as ut
 
 ## load our model
-layer_name = 'z'
+layer_name = 'fc1'
 mode_type = 'full_go'
 trainmode = 'NA_NA'
 model_name = f'{mode_type}_{trainmode}'
 
-def compute_knockout_ranking():
+def compute_knockout_ranking(var = 'pval'):
 
     #load activity scores
     na_activity_score = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
@@ -45,12 +45,19 @@ def compute_knockout_ranking():
                 #perform ttest
                 _, p_value = ttest_ind(ctrl_cells.loc[:,geneset].values, knockout_cells.loc[:,geneset].values, equal_var=False)
                 
+                try:
+                    fc = knockout_cells.loc[:,geneset].values.mean() / ctrl_cells.loc[:,geneset].values.mean()
+                except:
+                    fc = 1
+
+                abslogfc = np.abs(np.log(np.abs(fc)))
+
                 #append info
-                ttest_df.append([knockout, geneset, p_value])
+                ttest_df.append([knockout, geneset, p_value, abslogfc])
 
     ## build df
     ttest_df = pd.DataFrame(ttest_df)
-    ttest_df.columns = ['knockout','geneset','pval']
+    ttest_df.columns = ['knockout','geneset','pval', 'logfc']
 
     ## load genesets-genes mapping
     db_gene_go_map = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
@@ -69,12 +76,12 @@ def compute_knockout_ranking():
     ## belonging
     ranking_analysis_knockouts = []
 
+    
     ## analyze
     for knockout in tqdm(set(ttest_df['knockout'])):
         
         #get the pvalues
-        knockout_pvals = ttest_df[ttest_df['knockout'] == knockout][['geneset','pval']].sort_values(by='pval').reset_index(drop=True)
-        #knockout_pvals_filtered = knockout_pvals.sort_values(by='pval').dropna().reset_index(drop=True)
+        knockout_pvals = ttest_df[ttest_df['knockout'] == knockout][['geneset',var]].sort_values(by=var, ascending=(var == 'pval')).reset_index(drop=True)
 
         #get knockout ensemble name
         knockout_ensembl = ensembl_genename_dict[knockout]    
@@ -102,7 +109,7 @@ def compute_knockout_ranking():
 evaluate ranking of architecture vs random for knockout/ctrl cells
 """
 
-def analyze_ranking(ranking_analysis_knockouts):
+def analyze_ranking(ranking_analysis_knockouts, var='pval', hist=False):
 
     #do t test
     #_, p_value = ttest_ind(ranking_analysis_knockouts["med_rank_NetActivity"], ranking_analysis_knockouts["med_rank_random"], equal_var=False)
@@ -110,23 +117,24 @@ def analyze_ranking(ranking_analysis_knockouts):
     # Plot boxplot
     plt.figure(figsize=(6, 6))
     sns.boxplot(data=ranking_analysis_knockouts[['min_rank_NA', 'med_rank_NA', 'min_rank_rand', 'med_rank_rand']], palette="Set2")
-    plt.title(f'Ranking Analysis for Biologically Driven weights')
+    plt.title(f'Ranking Analysis for Biologically Driven weights - Mode {var}')
     plt.ylabel('Ranking')
     plt.grid(True)
-    plt.savefig(os.path.join('..','..','figures','uhler_paper', f'{mode_type}_{trainmode}', 'activation_scores', 'general_analysis', f'layer_{layer_name}_boxplot_ranking_analysis.png'))
+    plt.savefig(os.path.join('..','..','figures','uhler_paper', f'{mode_type}_{trainmode}', 'activation_scores', 'general_analysis', f'layer_{layer_name}_boxplot_ranking_analysis_{var}.png'))
 
-    for mode in ['med','min']:
+    if hist:
+        for mode in ['med','min']:
 
-        # Plot histograms
-        plt.figure(figsize=(12, 8))
-        sns.histplot(ranking_analysis_knockouts[f'{mode}_rank_NA'], color='blue', label=f'{mode} Ranking NetActivity', alpha=0.6, bins = 15)
-        sns.histplot(ranking_analysis_knockouts[f'{mode}_rank_rand'], color='red', label=f'{mode} Random Ranking', alpha=0.6, bins = 15)
-        plt.title(f'Histogram of {mode} Ranking and Random Ranking', fontsize=16)
-        plt.xlabel('Ranking', fontsize=14)
-        plt.ylabel('Frequency', fontsize=14)
-        plt.legend(fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.savefig(os.path.join('..','..','figures','uhler_paper', f'{mode_type}_{trainmode}', 'activation_scores', 'general_analysis', f'layer_{layer_name}_histplot_ranking_analysis_{mode}.png'))
+            # Plot histograms
+            plt.figure(figsize=(12, 8))
+            sns.histplot(ranking_analysis_knockouts[f'{mode}_rank_NA'], color='blue', label=f'{mode} Ranking NetActivity', alpha=0.6, bins = 15)
+            sns.histplot(ranking_analysis_knockouts[f'{mode}_rank_rand'], color='red', label=f'{mode} Random Ranking', alpha=0.6, bins = 15)
+            plt.title(f'Histogram of {mode} Ranking and Random Ranking', fontsize=16)
+            plt.xlabel('Ranking', fontsize=14)
+            plt.ylabel('Frequency', fontsize=14)
+            plt.legend(fontsize=12)
+            plt.grid(True, linestyle='--', alpha=0.7)
+            plt.savefig(os.path.join('..','..','figures','uhler_paper', f'{mode_type}_{trainmode}', 'activation_scores', 'general_analysis', f'layer_{layer_name}_histplot_ranking_analysis_{mode}.png'))
 
 def analyze_best_and_worse_performers(ranking_analysis_knockouts):
 
@@ -155,11 +163,11 @@ def analyze_best_and_worse_performers(ranking_analysis_knockouts):
         plt.savefig(os.path.join('..', '..', 'figures', 'uhler_paper', f'{mode_type}_{trainmode}', 'activation_scores', 'general_analysis', f'layer_{layer_name}_barplot_ranking_analysis_top_perform_{mode}.png'))
 
 ## compute ranking
-ranking_analysis_knockouts = compute_knockout_ranking()
+ranking_analysis_knockouts = compute_knockout_ranking(var = 'logfc')
 ranking_analysis_knockouts.to_csv(os.path.join('./../../','result', f'{mode_type}_{trainmode}',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t')
 
 ## plot analysis
-analyze_ranking(ranking_analysis_knockouts)
+analyze_ranking(ranking_analysis_knockouts, var = 'logfc')
 analyze_best_and_worse_performers(ranking_analysis_knockouts)
 
 

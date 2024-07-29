@@ -10,11 +10,14 @@ import seaborn as sns
 import graphical_models as gm
 from tqdm import tqdm
 from utils import get_data
+import scipy.stats as stats
 from collections import defaultdict
 from scipy.cluster.hierarchy import linkage, dendrogram, leaves_list
 from scipy.stats import ttest_ind
 import numpy as np
 from utils import get_data
+from collections import Counter
+from scipy.stats import gaussian_kde
 import utils as ut
 
 ## load our model
@@ -48,12 +51,62 @@ def plot_layer_weights(layer_name):
 #plot_layer_weights(layer_name = 'fc_mean')
 #plot_layer_weights(layer_name = 'fc_var')
 
-
 """
 analyze the latent factor relationship to perturbation
 """
 
-def analyze_latent_factor_relationship(layer_name):
+def analyze_latent_factor_relationship(layer_name, only_analysis=False):
+
+    def compute_IAS(heatmap_logfc_data, metric = 'max'):   
+
+        outliers_distr = []
+        for gene in heatmap_logfc_data.index:
+            
+            #get distr scores
+            distr = heatmap_logfc_data.loc[gene].values
+
+            #compute z-score
+            zscore = distr - distr.mean() / distr.std()
+            
+            #check if its normal
+            shapiro_test = stats.shapiro(zscore).pvalue
+            
+            ##kde
+            kde = gaussian_kde(zscore)
+            
+            for outlier in sorted(zscore, reverse=True):
+                
+                #compute the pvalue of getting this value or more extreme
+                outlier_pval_gauss = 1 - stats.norm.cdf(outlier, loc=0, scale=1)
+                outlier_pval_kde = kde.evaluate(outlier)[0]
+
+                if shapiro_test >= 0.001:
+                    outlier_pval = outlier_pval_gauss
+                else:
+                    outlier_pval = outlier_pval_kde
+                
+                ##
+                if outlier_pval <= 0.05:
+                    outliers_distr.append([gene,outlier_pval])
+                else:
+                    break
+
+        try:
+
+            df = pd.DataFrame(outliers_distr)
+            df.columns = ['gene','outlier_pval']
+
+            """
+            compute the outlier_activation metric
+            """
+            num_tot_interventions = heatmap_logfc_data.shape[0]
+            freq_interventions = sum([(heatmap_logfc_data.shape[1] - x) / (heatmap_logfc_data.shape[1]-1) for x in df.groupby('gene').apply(lambda x: x.shape[0]).values])
+            outlier_activation_metric = (1/num_tot_interventions) * freq_interventions
+        
+            return outlier_activation_metric
+
+        except:
+            return 0
 
     #load activity scores
     fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv')
@@ -77,38 +130,51 @@ def analyze_latent_factor_relationship(layer_name):
                 #perform ttest
                 _, p_value = ttest_ind(ctrl_cells.loc[:,geneset].values, knockout_cells.loc[:,geneset].values, equal_var=False)
                 
-                #append info
-                ttest_df.append([knockout, geneset, p_value])
+                ## abs(logFC)
+                knockout_mean = knockout_cells.loc[:,geneset].values.mean() 
+                ctrl_mean = ctrl_cells.loc[:,geneset].values.mean()
 
+                if (not ctrl_mean) or (not knockout_mean):
+                    abslogfc = 0
+                else:
+                    abslogfc = np.abs(np.log(np.abs(knockout_mean/ctrl_mean)))
+            
+                #append info
+                ttest_df.append([knockout, geneset, p_value, abslogfc])
+                
     ## build df
     ttest_df = pd.DataFrame(ttest_df)
-    ttest_df.columns = ['knockout','geneset','pval']
+    ttest_df.columns = ['knockout','geneset','pval', 'abslogfc']
     ttest_df = ttest_df.sort_values(by=['knockout','geneset']).reset_index(drop=True)
 
     # Pivot the DataFrame to create a matrix for the heatmap
     heatmap_data = ttest_df.pivot(index="knockout", columns="geneset", values="pval")
     heatmap_data = heatmap_data.dropna(axis=1)
+    heatmap_logfc_data = ttest_df.pivot(index="knockout", columns="geneset", values="abslogfc")
+    heatmap_logfc_data = heatmap_logfc_data.dropna(axis=1)
+
+    ## compute outlier df
+    outlier_metric = compute_IAS(heatmap_logfc_data)
+
+    ## check if only analysis is required
+    if only_analysis:
+        return outlier_metric
+    
+    heatmap_logfc_data = (heatmap_logfc_data.T/heatmap_logfc_data.max(axis=1)).T
+
+    """
+    save log-scaled heatmap
+    """
     log_heatmap_data = -np.log10(heatmap_data)
     log_heatmap_data = (log_heatmap_data.T/log_heatmap_data.max(axis=1)).T
-    #log_heatmap_data = log_heatmap_data/log_heatmap_data.max()
-    log_heatmap_data.to_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}', f'activation_scores_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
-
-    # # Perform hierarchical clustering on the columns
-    # reordered_rows = dendrogram(linkage(log_heatmap_data, method='ward', optimal_ordering=True), labels=log_heatmap_data.index, no_plot=True)['ivl']
-    # reordered_columns = dendrogram(linkage(log_heatmap_data.T, method='ward', optimal_ordering=True), labels=log_heatmap_data.columns, no_plot=True)['ivl']
+    fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}')
+    log_heatmap_data.to_csv(os.path.join(fpath, f'activation_scores_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
+    heatmap_logfc_data.to_csv(os.path.join(fpath, f'activation_scores_logFC_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
     
-    # # Generate the heatmap
-    # fpath_plots = os.path.join('./../../figures','uhler_paper',f'{mode_type}_{trainmode}')
-    # plt.figure(figsize=(12, 12))
-    # #sns.clustermap(log_heatmap_data, method="complete"), #row_colors=[cluster_colormap[i] for i in clusters])
-    # sns.heatmap(log_heatmap_data.loc[reordered_rows, :], annot=False, cmap="inferno", cbar_kws={'label': 'p-value'})
-    # plt.title("Heatmap of p-values for Knockout Genes and Genesets")
-    # plt.xlabel("Geneset")
-    # plt.ylabel("Knockout Gene")
-    # plt.savefig(os.path.join(fpath_plots, f'activation_scores_layer_{layer_name}_heatmap.png'))
 
 ##
-#analyze_latent_factor_relationship(layer_name = 'fc1')
-# analyze_latent_factor_relationship(layer_name = 'fc_mean')
-# analyze_latent_factor_relationship(layer_name = 'fc_var')
-analyze_latent_factor_relationship(layer_name = 'z')
+analyze_latent_factor_relationship(layer_name = 'fc_mean', only_analysis=True)
+analyze_latent_factor_relationship(layer_name = 'fc_var', only_analysis=True)
+    
+analyze_latent_factor_relationship(layer_name = 'fc1', only_analysis=True)
+analyze_latent_factor_relationship(layer_name = 'z', only_analysis=True)

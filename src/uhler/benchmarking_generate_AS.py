@@ -85,7 +85,7 @@ def load_data_raw_go(ptb_targets):
 
 ##load our model
 mode_type = 'full_go'
-trainmode = 'NA_NA'
+trainmode = 'regular'
 layertype = 'fc_var'
 model_name = f'{mode_type}_{trainmode}'
 savedir = f'./../../result/{model_name}' 
