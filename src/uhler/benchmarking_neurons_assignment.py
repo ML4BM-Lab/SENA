@@ -22,7 +22,7 @@ import utils as ut
 
 ## load our model
 mode_type = 'full_go'
-trainmode = 'NA_NA'
+trainmode = 'NA+deltas'
 model_name = f'{mode_type}_{trainmode}'
 
 """
@@ -153,12 +153,9 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
     heatmap_logfc_data = ttest_df.pivot(index="knockout", columns="geneset", values="abslogfc")
     heatmap_logfc_data = heatmap_logfc_data.dropna(axis=1)
 
-    ## compute outlier df
-    outlier_metric = compute_IAS(heatmap_logfc_data)
-
     ## check if only analysis is required
     if only_analysis:
-        return outlier_metric
+        return compute_IAS(heatmap_logfc_data)
     
     heatmap_logfc_data = (heatmap_logfc_data.T/heatmap_logfc_data.max(axis=1)).T
 
@@ -173,8 +170,8 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
     
 
 ##
-analyze_latent_factor_relationship(layer_name = 'fc_mean', only_analysis=True)
-analyze_latent_factor_relationship(layer_name = 'fc_var', only_analysis=True)
+#analyze_latent_factor_relationship(layer_name = 'fc_mean', only_analysis=True)
+#analyze_latent_factor_relationship(layer_name = 'fc_var', only_analysis=True)
     
-analyze_latent_factor_relationship(layer_name = 'fc1', only_analysis=True)
-analyze_latent_factor_relationship(layer_name = 'z', only_analysis=True)
+#analyze_latent_factor_relationship(layer_name = 'fc1', only_analysis=True)
+analyze_latent_factor_relationship(layer_name = 'z', only_analysis=False)

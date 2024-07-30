@@ -230,16 +230,19 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         axs[1].set_xticks([])
 
         # Annotate red (affected) points with GO terms
+        j = 0
         for i, row in mean_scores_plus_pvals.iterrows():
             if row['affected'] == 1:
-                plt.annotate(row.name, (i, row['pval']), textcoords="offset points", xytext=(0,10), ha='center', fontsize=9, color='red')
-
+                dx = -10 if j % 2 else 10
+                #dx = 10
+                plt.annotate(row.name, (i, row['pval']), textcoords="offset points", xytext=(0,dx), ha='center', fontsize=9, color='red')
+                j+=1
         plt.tight_layout()
         plt.savefig(os.path.join(fpath, f'layer_{layer_name}_boxplot_plus_scatterplot_{name}.png'))
 
     ## load info
     mode_type = 'full_go'
-    trainmode = 'NA_NA'
+    trainmode = 'NA+deltas'
     
     fpath = os.path.join('./../../','figures','uhler_paper',f'{mode_type}_{trainmode}','activation_scores', target_knockout)
     if not os.path.isdir(fpath):

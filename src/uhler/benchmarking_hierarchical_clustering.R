@@ -9,7 +9,7 @@ library(pheatmap)
 library(seriation)
 
 # Define the file path
-modeltype <- "full_go_NA_NA"
+modeltype <- "full_go_NA+deltas"
 layername <- "z"
 mode <- 'logFC'
 file_path <- paste0("./result/",modeltype,"/activation_scores_",mode,"_DEA_layer_",layername,"_matrix.tsv")
