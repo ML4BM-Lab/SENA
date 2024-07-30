@@ -22,7 +22,7 @@ import utils as ut
 
 ## load our model
 mode_type = 'full_go'
-trainmode = 'NA+deltas'
+trainmode = 'NA_NA'
 model_name = f'{mode_type}_{trainmode}'
 
 """
@@ -86,6 +86,7 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
                     outlier_pval = outlier_pval_kde
                 
                 ##
+                print(outlier_pval)
                 if outlier_pval <= 0.05:
                     outliers_distr.append([gene,outlier_pval])
                 else:
@@ -137,7 +138,7 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
                 if (not ctrl_mean) or (not knockout_mean):
                     abslogfc = 0
                 else:
-                    abslogfc = np.abs(np.log(np.abs(knockout_mean/ctrl_mean)))
+                    abslogfc = knockout_mean - ctrl_mean
             
                 #append info
                 ttest_df.append([knockout, geneset, p_value, abslogfc])
@@ -174,4 +175,4 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
 #analyze_latent_factor_relationship(layer_name = 'fc_var', only_analysis=True)
     
 #analyze_latent_factor_relationship(layer_name = 'fc1', only_analysis=True)
-analyze_latent_factor_relationship(layer_name = 'z', only_analysis=False)
+analyze_latent_factor_relationship(layer_name = 'z', only_analysis=True)
