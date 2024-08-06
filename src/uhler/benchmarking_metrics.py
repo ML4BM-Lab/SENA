@@ -58,7 +58,7 @@ def load_data_raw_go(ptb_targets):
 
     return adata, perturbations_idx_dict, sorted(set(go_2_z_raw['PathwayID'].values)), sorted(set(go_2_z_raw['topGO'].values)) 
 
-def compute_metrics(model_name = 'gosize5'):
+def compute_metrics(model_name = 'full_go'):
 	
     # read different trained models here
     savedir = f'./../../result/{model_name}' 
@@ -157,7 +157,7 @@ def compute_metrics(model_name = 'gosize5'):
     df = pd.concat([df_train, df_test, df_double]).reset_index(drop=True)
     df.to_csv(os.path.join('./../../','result', model_name, f'{model_name}_mmd_r2_rmse.tsv'),sep='\t')
 
-def visualize_gradients(model_name = 'gosize5'):
+def visualize_gradients(model_name = 'full_go'):
 
     # read different trained models here
     savedir = f'./../../result/{model_name}' 
@@ -172,20 +172,36 @@ def visualize_gradients(model_name = 'gosize5'):
 
     def plot_layer_weights(layer_name, model, fpath):
 
-        ## get non-zero gradients
-        non_masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) != 0].detach().cpu().numpy()')
-        masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) == 0].detach().cpu().numpy()')
+        try:
 
-        ## Plotting the histogram
-        plt.figure(figsize=(10, 6))
-        plt.hist(non_masked_gradients, bins=30, alpha=0.5, label='Non-masked values')
-        plt.hist(masked_gradients, bins=30, alpha=0.5, label='Masked values')
-        plt.yscale('log')
-        plt.legend()
-        plt.xlabel('Value')
-        plt.ylabel('Frequency')
-        plt.title(f'Layer {layer_name} weights')
-        plt.savefig(os.path.join(fpath, f'{model_name}_layer_{layer_name}_histplot.png'))
+            ## get non-zero gradients
+            non_masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) != 0].detach().cpu().numpy()')
+            masked_gradients = eval(f'model.{layer_name}.weight[(model.{layer_name}.weight * model.{layer_name}.mask.T) == 0].detach().cpu().numpy()')
+
+            ## Plotting the histogram
+            plt.figure(figsize=(10, 6))
+            plt.hist(non_masked_gradients, bins=30, alpha=0.5, label='Non-masked values')
+            plt.hist(masked_gradients, bins=30, alpha=0.5, label='Masked values')
+            plt.yscale('log')
+            plt.legend()
+            plt.xlabel('Value')
+            plt.ylabel('Frequency')
+            plt.title(f'Layer {layer_name} weights')
+            plt.savefig(os.path.join(fpath, f'{model_name}_layer_{layer_name}_histplot.png'))
+
+        except:
+
+            ##
+            gradients = eval(f'model.{layer_name}.weight.detach().cpu().numpy().flatten()')
+
+            ## Plotting the histogram
+            plt.figure(figsize=(10, 6))
+            plt.hist(gradients, bins=30, alpha=0.5, label = f'layer {layer_name}', color='blue')
+            plt.yscale('log')
+            plt.xlabel('Value')
+            plt.ylabel('Frequency')
+            plt.title(f'Layer {layer_name} weights')
+            plt.savefig(os.path.join(fpath, f'{model_name}_layer_{layer_name}_histplot.png'))
 
     def plot_weight_heatmap(layer_name, model, fpath):
 
@@ -216,19 +232,19 @@ def visualize_gradients(model_name = 'gosize5'):
         plt.savefig(os.path.join(fpath, f'{model_name}_layer_{layer_name}_heatmap.png'))
         
     ## hist
-    plot_layer_weights(layer_name='fc1', model=model, fpath=fpath)
+    ##plot_layer_weights(layer_name='fc1', model=model, fpath=fpath)
     plot_layer_weights(layer_name='fc_mean', model=model, fpath=fpath)
     plot_layer_weights(layer_name='fc_var', model=model, fpath=fpath)
 
     ## heatmap
-    plot_weight_heatmap(layer_name='fc_mean', model=model, fpath=fpath)
-    plot_weight_heatmap(layer_name='fc_var', model=model, fpath=fpath)
+    #plot_weight_heatmap(layer_name='fc_mean', model=model, fpath=fpath)
+    #plot_weight_heatmap(layer_name='fc_var', model=model, fpath=fpath)
 
 ## model name
-model_name = 'full_go_regular'
+model_name = 'full_go_NA+deltas'
 
 ## compute metrics
-compute_metrics(model_name = model_name)
+##compute_metrics(model_name = model_name)
 
 ## visualize gradients
-#visualize_gradients(model_name = model_name) 
+visualize_gradients(model_name = model_name) 
