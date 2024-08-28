@@ -9,162 +9,296 @@ importlib.reload(st)
 import os
 import pickle
 import seaborn as sns
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42 
+matplotlib.rcParams['ps.fonttype'] = 42
 
 
-def plot_ranking_pvalue():
+def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
 
-    grouped = sena_layer1.groupby('epoch').agg(
-        aggregated_pval=('p-val', lambda pvals: combine_pvalues(pvals)[1])
+    def build_dataset():
+
+        #mode
+        variables = ['mode','epoch','mse','seed']
+
+        ##
+        arch_l = []
+        for arch in methods:
+            
+            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_mse[variables])
+        
+        df = pd.concat(arch_l)
+        return df
+
+    #retrieve dataset
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    colors = sns.color_palette("Set2", len(methods))
+    df = build_dataset()
+
+    # Group by epoch and mode, then calculate the median and IQR for MSE
+    grouped = df.groupby(['epoch', 'mode']).agg(
+        mse_median=('mse', 'median'),
+        Q1=('mse', lambda x: np.percentile(x, 25)),
+        Q3=('mse', lambda x: np.percentile(x, 75))
     ).reset_index()
 
-    # Plot the aggregated p-values against epochs on a logarithmic scale
-    plt.plot(grouped['epoch'], grouped['aggregated_pval'], '-o', label='Aggregated p-value')
+    # Calculate the IQR
+    grouped['IQR'] = grouped['Q3'] - grouped['Q1']
+
+    # Calculate the lower and upper bounds for the shadow
+    grouped['lower_bound'] = grouped['Q1'] - 1.5 * grouped['IQR']
+    grouped['upper_bound'] = grouped['Q3'] + 1.5 * grouped['IQR']
+
+    # Define the modes and corresponding colors
+    
+
+    # Set up the figure and axes
+    plt.figure(figsize=(12, 8))
+
+    # Loop through each mode to plot
+    for method, color in zip(methods, colors):
+        method_group = grouped[grouped['mode'] == method]
+        
+        plt.plot(method_group['epoch'], method_group['mse_median'], '-o', label=method.capitalize(), color=color)
+        plt.fill_between(
+            method_group['epoch'], 
+            method_group['lower_bound'], 
+            method_group['upper_bound'], 
+            color=color, 
+            alpha=0.2
+        )
 
     # Set y-axis to log scale
     plt.yscale('log')
 
-    # Set labels and title
-    plt.xlabel('Epoch')
-    plt.ylabel('Aggregated p-value (log scale)')
-    plt.title('Aggregated p-value vs. Epoch (Fisher\'s method)')
+    # Add a title and labels
+    plt.title('Comparison of MSE Across Epochs: SENA vs Regular (Median & IQR)', fontsize=16)
+    plt.xlabel('Epoch', fontsize=14)
+    plt.ylabel('Median MSE (log scale)', fontsize=14)
 
-    # Show legend
+    # Add gridlines for better readability
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # Show the legend
     plt.legend()
 
-    # Show the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study','ae_SENA','sena_ablation_1layer_pvalue.png'))
-    plt.cla()
-    plt.clf()
-    plt.close()
-
-def plot_mean_recall():
-
-    # Group by epoch and calculate necessary statistics
-    grouped = sena_layer1.groupby('epoch').agg(
-        mean_recall_mean=('mean_recall_at_100', 'mean'),
-        mean_recall_std=('mean_recall_at_100', 'std'),
-        mean_recall_direct_mean=('mean_recall_at_100_direct', 'mean'),
-        mean_recall_direct_std=('mean_recall_at_100_direct', 'std'),
-        mse_mean=('mse', 'mean'),
-        mse_std = ('mse', 'std')
-    ).reset_index()
-
-    # Create a figure and axis
-    fig, ax1 = plt.subplots()
-
-    # Plot mean_recall_at_100 with shaded standard deviation
-    line1, = ax1.plot(grouped['epoch'], grouped['mean_recall_mean'], '-o', label='Mean Recall at 100', color='#98984d')
-    ax1.fill_between(
-        grouped['epoch'], 
-        grouped['mean_recall_mean'] - grouped['mean_recall_std'], 
-        grouped['mean_recall_mean'] + grouped['mean_recall_std'], 
-        color='gray', 
-        alpha=0.2, 
-        label='Standard Deviation'
-    )
-
-    # Plot mean_recall_at_100_direct
-    line2, = ax1.plot(grouped['epoch'], grouped['mean_recall_direct_mean'], '-o', label='Mean Recall at 100 Direct', color='#b3669e')
-    ax1.fill_between(
-        grouped['epoch'], 
-        grouped['mean_recall_direct_mean'] - grouped['mean_recall_direct_std'], 
-        grouped['mean_recall_direct_mean'] + grouped['mean_recall_direct_std'], 
-        color='gray', 
-        alpha=0.2, 
-        label='Standard Deviation'
-    )
-
-    # Set labels for the first y-axis
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Mean Recall at 100')
-    ax1.set_title('Mean Recall and MSE vs. Epoch')
-    ax1.set_ylim(0, 1)
-
-    # Create a second y-axis for mse
-    ax2 = ax1.twinx()
-    line3, = ax2.plot(grouped['epoch'], grouped['mse_mean'], '--', label='MSE', color='red')
-    ax2.fill_between(
-        grouped['epoch'], 
-        grouped['mse_mean'] - grouped['mse_std'], 
-        grouped['mse_mean'] + grouped['mse_std'], 
-        color='gray', 
-        alpha=0.2, 
-        label='Standard Deviation'
-    )
-
-    # Set label for the second y-axis
-    ax2.set_ylabel('MSE')
-    ax2.set_ylim(-0.05, 1)
-
-    # Combine legends from both axes into one
-    lines = [line1, line2, line3]
-    labels = [line.get_label() for line in lines]
-    ax1.legend(lines, labels, loc='upper right')
-
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study','ae_SENA','sena_ablation_1layer_mean_recall_and_mse.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_mse_{subsample}.png'))
 
     # Clear the plot
     plt.cla()
     plt.clf()
     plt.close()
 
-def plot_outlier_analysis():
+def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
 
     def build_dataset():
 
         #mode
-        mode = f'1layer'
-        sena_outliers = pd.read_csv(os.path.join('./../../result','ablation_study','ae_sena',f'autoencoder_sena_ablation_outlier_{mode}.tsv'),sep='\t',index_col=0)
-        regular_outliers = pd.read_csv(os.path.join('./../../result','ablation_study','ae_regular',f'autoencoder_regular_ablation_outlier_{mode}.tsv'),sep='\t',index_col=0)
-        df = pd.concat([sena_outliers, regular_outliers])
+        variables = ['mode', 'epoch', 'sparsity', 'seed']
+
+        ##
+        arch_l = []
+        for arch in methods:
+            
+            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_mse[variables])
+        
+        df = pd.concat(arch_l)
         return df
+
+    #retrieve dataset
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    colors = sns.color_palette("Set2", len(methods))
+    df = build_dataset()
+
+    # Group by epoch and mode, then calculate the median and IQR for MSE
+    grouped = df.groupby(['epoch', 'mode']).agg(
+        sparsity_median=('sparsity', 'median'),
+        Q1=('sparsity', lambda x: np.percentile(x, 25)),
+        Q3=('sparsity', lambda x: np.percentile(x, 75))
+    ).reset_index()
+
+    # Calculate the IQR
+    grouped['IQR'] = grouped['Q3'] - grouped['Q1']
+
+    # Calculate the lower and upper bounds for the shadow
+    grouped['lower_bound'] = grouped['Q1'] - 1.5 * grouped['IQR']
+    grouped['upper_bound'] = grouped['Q3'] + 1.5 * grouped['IQR']
+
+    # Set up the figure and axes
+    plt.figure(figsize=(12, 8))
+
+    # Loop through each mode to plot
+    for method, color in zip(methods, colors):
+        method_group = grouped[grouped['mode'] == method]
+        
+        plt.plot(method_group['epoch'], method_group['sparsity_median'], '-o', label=method.capitalize(), color=color)
+        plt.fill_between(
+            method_group['epoch'], 
+            method_group['lower_bound'], 
+            method_group['upper_bound'], 
+            color=color, 
+            alpha=0.2
+        )
+
+
+    # Add a title and labels
+    plt.title('Comparison of sparsity Across Epochs: SENA vs Regular (Median & IQR)', fontsize=16)
+    plt.xlabel('Epoch', fontsize=14)
+    plt.ylabel('Median sparsity', fontsize=14)
+
+    # Add gridlines for better readability
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # Show the legend
+    plt.legend()
+
+    # Save the plot
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}.png'))
+
+    # Clear the plot
+    plt.cla()
+    plt.clf()
+    plt.close()
+
+    """keep only last epoch"""
+    last_epoch_df = df[df['epoch'] == df['epoch'].max()]
+
+    grouped_sparsity = last_epoch_df.groupby('mode').agg(
+        sparsity_mean=('sparsity', 'mean'),
+        sparsity_stderr=('sparsity', lambda x: np.std(x) / np.sqrt(len(x)))
+    ).reset_index()
+
+    # Set up the figure
+    plt.figure(figsize=(10, 6))
+
+    # Create a barplot with error bars for the sparsity
+    sns.barplot(x='mode', y='sparsity_mean', data=grouped_sparsity, palette='Set2', ci=None)
+    plt.errorbar(x=np.arange(len(grouped_sparsity['mode'])), 
+                y=grouped_sparsity['sparsity_mean'], 
+                yerr=grouped_sparsity['sparsity_stderr'], 
+                fmt='none', 
+                c='black', 
+                capsize=5)
+
+    # Set labels and title
+    plt.xlabel('Mode', fontsize=14)
+    plt.ylabel('Mean Sparsity', fontsize=14)
+    plt.title(f'Sparsity by Mode at Epoch {df["epoch"].max()+1}', fontsize=16)
+
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}_last_epoch.png'))
+
+    # Clear the plot
+    plt.cla()
+    plt.clf()
+    plt.close()
+
+def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff'):
+
+    def build_dataset():
+
+        ##
+        arch_l = []
+        for arch in methods:
+            
+            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_mse)
+        
+        df = pd.concat(arch_l)
+        return df
+
+    #retrieve dataset
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'l1_3', 'l1_5', 'l1_7']
+    colors = sns.color_palette("Set2", len(methods))
 
     df = build_dataset()
 
     grouped = df.groupby(['epoch', 'mode']).agg(
-            z_diff_mean=('z_diff', 'mean'),
-            z_diff_std=('z_diff', 'std')
+            metric_mean=(metric, 'mean'),
+            metric_std=(metric, 'std')
             ).reset_index()
 
-    # Filter data for 'sena' and 'regular' modes
-    grouped_sena = grouped[grouped['mode'] == 'sena']
-    grouped_regular = grouped[grouped['mode'] == 'regular']
-
     # Create a figure
+    plt.figure(figsize=(12, 8))
+
+    # Loop over each method and plot the corresponding data
+    for method, color in zip(methods, colors):
+        # Filter data for the current method
+        grouped_method = grouped[grouped['mode'] == method]
+        
+        # Plot for the current method
+        plt.plot(grouped_method['epoch'], grouped_method['metric_mean'], '-o', label=method, color=color)
+        plt.fill_between(
+            grouped_method['epoch'], 
+            grouped_method['metric_mean'] - grouped_method['metric_std'], 
+            grouped_method['metric_mean'] + grouped_method['metric_std'], 
+            color=color, 
+            alpha=0.2
+        )
+
+    # Add labels and title
+    plt.xlabel('Epoch', fontsize=14)
+    plt.ylabel('Metric Mean', fontsize=14)
+    plt.title('Metric vs. Epoch for Different Methods', fontsize=16)
+
+    # Add gridlines for better readability
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    # Show the legend
+    plt.legend()
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_both_ablation_1layer_{metric}_{subsample}.png'))
+    plt.cla()
+    plt.clf()
+    plt.close()
+
+def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo', epoch = 5):
+
+    ## load data
+    with open(os.path.join('./../../result/ablation_study',f'ae_{modeltype}',f'autoencoder_{modeltype}_ablation_{analysis}_{mode}_{subsample}.pickle'), 'rb') as handle:
+        results = pickle.load(handle)
+
+    #subset
+    seed_0_df = results[0]
+    subset_epoch = seed_0_df[seed_0_df['epoch']==epoch]
+    
+    # Melt the DataFrame to plot both input_zdiff and latent_zdiff in a single plot
+    df_melted = subset_epoch.melt(value_vars=['input_zdiff', 'latent_zdiff'], var_name='Type', value_name='z_diff')
+
+    # Set up the figure and axes
     plt.figure(figsize=(10, 6))
 
-    # Plot for 'sena' mode
-    plt.plot(grouped_sena['epoch'], grouped_sena['z_diff_mean'], '-o', label='SENA', color='blue')
-    plt.fill_between(
-        grouped_sena['epoch'], 
-        grouped_sena['z_diff_mean'] - grouped_sena['z_diff_std'], 
-        grouped_sena['z_diff_mean'] + grouped_sena['z_diff_std'], 
-        color='blue', 
-        alpha=0.2
-    )
+    # Create the boxplot
+    sns.boxplot(data=df_melted, x='Type', y='z_diff', palette='Set3', width=0.5)
 
-    # Plot for 'regular' mode
-    plt.plot(grouped_regular['epoch'], grouped_regular['z_diff_mean'], '-o', label='Regular', color='green')
-    plt.fill_between(
-        grouped_regular['epoch'], 
-        grouped_regular['z_diff_mean'] - grouped_regular['z_diff_std'], 
-        grouped_regular['z_diff_mean'] + grouped_regular['z_diff_std'], 
-        color='green', 
-        alpha=0.2
-    )
+    # Set titles and labels
+    plt.title(f'Comparison of Input and Latent z_diff - Epoch {epoch}', fontsize=16)
+    plt.xlabel('Type', fontsize=14)
+    plt.ylabel('z_diff', fontsize=14)
 
-    # Set labels and title
-    plt.xlabel('Epoch')
-    plt.ylabel('Mean z_diff')
-    plt.title('Mean z_diff vs. Epoch with Standard Deviation for SENA and Regular')
+    # Add gridlines for better readability
+    plt.grid(True, linestyle='--', alpha=0.6)
 
-    # Show legend
-    plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study','sena_regular_ablation_1layer_outliers.png'))
+    # Show the plot
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{modeltype}_ablation_{mode}_{analysis}_{epoch}_{subsample}.png'))
     plt.cla()
     plt.clf()
     plt.close()
 
 if __name__ == '__main__':
-    plot_outlier_analysis()
+    
+    #compare sena vs regular
+    #plot_outlier_analysis(metric = 'z_diff', subsample = 'topgo')
+    #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'topgo')
+
+    #plot_outlier_analysis(metric = 'z_diff', subsample = 'raw')
+    #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'raw')
+
+    #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
+    #plot_latent_correlation(epoch=0)
+
+    #plot mse analysis
+    plot_mse_analysis(mode = '1layer', subsample = 'topgo')
+    plot_sparsity_analysis(mode = '1layer', subsample = 'topgo')
+    pass

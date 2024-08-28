@@ -14,8 +14,42 @@ docker exec -it causal bash
 cd /wdir/src/sena_ablation_study
 
 
-nohup python3 -u regular_ae.py regular outlier interpretability > ./../../logs/ablation_study/ae_regular_1layer_outlier.log &
-nohup python3 -u regular_ae.py sena outlier interpretability > ./../../logs/ablation_study/ae_sena_1layer_outlier.log &
+# --> topgo
 
-nohup python3 -u regular_ae.py regular outlier efficiency > ./../../logs/ablation_study/ae_regular_1layer_outlier_efficiency.log &
-nohup python3 -u regular_ae.py sena outlier efficiency > ./../../logs/ablation_study/ae_sena_1layer_outlier_efficiency.log &
+## interpretability
+nohup python3 -u regular_ae.py regular_orig interpretability topgo > ./../../logs/ablation_study/ae_regular_orig_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py regular interpretability topgo > ./../../logs/ablation_study/ae_regular_1layer_interpretability_topgo.log &
+
+nohup python3 -u regular_ae.py sena_0 interpretability topgo > ./../../logs/ablation_study/ae_sena_0_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py sena_1 interpretability topgo > ./../../logs/ablation_study/ae_sena_1_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py sena_3 interpretability topgo > ./../../logs/ablation_study/ae_sena_3_1layer_interpretability_topgo.log &
+
+nohup python3 -u regular_ae.py l1_3 interpretability topgo > ./../../logs/ablation_study/ae_l1_3_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py l1_5 interpretability topgo > ./../../logs/ablation_study/ae_l1_5_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py l1_7 interpretability topgo > ./../../logs/ablation_study/ae_l1_7_1layer_interpretability_topgo.log &
+
+
+## efficiency
+nohup python3 -u regular_ae.py regular_orig efficiency topgo > ./../../logs/ablation_study/ae_regular_orig_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py regular efficiency topgo > ./../../logs/ablation_study/ae_regular_1layer_efficiency_topgo.log &
+
+nohup python3 -u regular_ae.py sena_0 efficiency topgo > ./../../logs/ablation_study/ae_sena_0_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_3 efficiency topgo > ./../../logs/ablation_study/ae_sena_3_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_1 efficiency topgo > ./../../logs/ablation_study/ae_sena_3_1layer_efficiency_topgo.log &
+
+nohup python3 -u regular_ae.py l1_3 efficiency topgo > ./../../logs/ablation_study/ae_l1_3_1layer_efficiency_topgo.log &
+# nohup python3 -u regular_ae.py l1_4 efficiency topgo > ./../../logs/ablation_study/ae_l1_4_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py l1_5 efficiency topgo > ./../../logs/ablation_study/ae_l1_5_1layer_efficiency_topgo.log &
+# nohup python3 -u regular_ae.py l1_6 efficiency topgo > ./../../logs/ablation_study/ae_l1_6_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py l1_7 efficiency topgo > ./../../logs/ablation_study/ae_l1_7_1layer_efficiency_topgo.log &
+
+
+## lcorr
+nohup python3 -u regular_ae.py sena lcorr topgo > ./../../logs/ablation_study/ae_sena_1layer_lcorr_topgo.log &
+
+# --> raw
+
+## interpretability
+nohup python3 -u regular_ae.py regular interpretability raw > ./../../logs/ablation_study/ae_regular_1layer_interpretability_raw.log &
+nohup python3 -u regular_ae.py sena interpretability raw > ./../../logs/ablation_study/ae_sena_1layer_interpretability_raw.log &
+
