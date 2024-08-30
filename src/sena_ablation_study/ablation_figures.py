@@ -19,7 +19,7 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     def build_dataset():
 
         #mode
-        variables = ['mode','epoch','mse','seed']
+        variables = ['mode','epoch','test_mse','seed']
 
         ##
         arch_l = []
@@ -38,9 +38,9 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
 
     # Group by epoch and mode, then calculate the median and IQR for MSE
     grouped = df.groupby(['epoch', 'mode']).agg(
-        mse_median=('mse', 'median'),
-        Q1=('mse', lambda x: np.percentile(x, 25)),
-        Q3=('mse', lambda x: np.percentile(x, 75))
+        test_mse_median=('test_mse', 'median'),
+        Q1=('test_mse', lambda x: np.percentile(x, 25)),
+        Q3=('test_mse', lambda x: np.percentile(x, 75))
     ).reset_index()
 
     # Calculate the IQR
@@ -50,9 +50,6 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     grouped['lower_bound'] = grouped['Q1'] - 1.5 * grouped['IQR']
     grouped['upper_bound'] = grouped['Q3'] + 1.5 * grouped['IQR']
 
-    # Define the modes and corresponding colors
-    
-
     # Set up the figure and axes
     plt.figure(figsize=(12, 8))
 
@@ -60,7 +57,7 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     for method, color in zip(methods, colors):
         method_group = grouped[grouped['mode'] == method]
         
-        plt.plot(method_group['epoch'], method_group['mse_median'], '-o', label=method.capitalize(), color=color)
+        plt.plot(method_group['epoch'], method_group['test_mse_median'], '-o', label=method.capitalize(), color=color, markersize=4)
         plt.fill_between(
             method_group['epoch'], 
             method_group['lower_bound'], 
@@ -73,9 +70,9 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     plt.yscale('log')
 
     # Add a title and labels
-    plt.title('Comparison of MSE Across Epochs: SENA vs Regular (Median & IQR)', fontsize=16)
+    plt.title('Comparison of test_mse Across Epochs: SENA vs Regular (Median & IQR)', fontsize=16)
     plt.xlabel('Epoch', fontsize=14)
-    plt.ylabel('Median MSE (log scale)', fontsize=14)
+    plt.ylabel('Median test_mse (log scale)', fontsize=14)
 
     # Add gridlines for better readability
     plt.grid(True, linestyle='--', alpha=0.6)
@@ -84,7 +81,7 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_mse_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_test_mse_{subsample}.png'))
 
     # Clear the plot
     plt.cla()
@@ -102,18 +99,18 @@ def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
         arch_l = []
         for arch in methods:
             
-            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
-            arch_l.append(arch_mse[variables])
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_test_mse[variables])
         
         df = pd.concat(arch_l)
         return df
 
     #retrieve dataset
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
     colors = sns.color_palette("Set2", len(methods))
     df = build_dataset()
 
-    # Group by epoch and mode, then calculate the median and IQR for MSE
+    # Group by epoch and mode, then calculate the median and IQR for test_mse
     grouped = df.groupby(['epoch', 'mode']).agg(
         sparsity_median=('sparsity', 'median'),
         Q1=('sparsity', lambda x: np.percentile(x, 25)),
@@ -134,7 +131,7 @@ def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
     for method, color in zip(methods, colors):
         method_group = grouped[grouped['mode'] == method]
         
-        plt.plot(method_group['epoch'], method_group['sparsity_median'], '-o', label=method.capitalize(), color=color)
+        plt.plot(method_group['epoch'], method_group['sparsity_median'], '-o', label=method.capitalize(), color=color, markersize=4)
         plt.fill_between(
             method_group['epoch'], 
             method_group['lower_bound'], 
@@ -169,7 +166,7 @@ def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
     grouped_sparsity = last_epoch_df.groupby('mode').agg(
         sparsity_mean=('sparsity', 'mean'),
         sparsity_stderr=('sparsity', lambda x: np.std(x) / np.sqrt(len(x)))
-    ).reset_index()
+    ).reset_index().sort_values(by='sparsity_mean', ascending=False)
 
     # Set up the figure
     plt.figure(figsize=(10, 6))
@@ -203,14 +200,14 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff
         arch_l = []
         for arch in methods:
             
-            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
-            arch_l.append(arch_mse)
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_test_mse)
         
         df = pd.concat(arch_l)
         return df
 
     #retrieve dataset
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'l1_3', 'l1_5', 'l1_7']
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular','regular_orig', 'l1_3', 'l1_5', 'l1_7']
     colors = sns.color_palette("Set2", len(methods))
 
     df = build_dataset()
@@ -248,7 +245,7 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_both_ablation_1layer_{metric}_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_{metric}_{subsample}.png'))
     plt.cla()
     plt.clf()
     plt.close()
@@ -296,9 +293,9 @@ if __name__ == '__main__':
     #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'raw')
 
     #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
-    #plot_latent_correlation(epoch=0)
+    plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
 
     #plot mse analysis
-    plot_mse_analysis(mode = '1layer', subsample = 'topgo')
-    plot_sparsity_analysis(mode = '1layer', subsample = 'topgo')
+    #plot_mse_analysis(mode = '1layer', subsample = 'topgo')
+    #plot_sparsity_analysis(mode = '1layer', subsample = 'topgo')
     pass

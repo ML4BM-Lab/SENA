@@ -326,6 +326,28 @@ def compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df
 
     return lcorr_df
 
+def compute_sparsity_contribution(model, dataset, mode, sparsity_th = 1e-3):
+
+    contributions = []
+
+    with torch.no_grad():
+        
+        #compute layer weights
+        if mode[:4] == 'sena':
+            layer_weights = ((model.encoder.weight * model.encoder.mask.T).T)
+        else:
+            layer_weights = model.encoder.weight.T
+
+        #compute score contributions
+        dmean = dataset.mean(axis=0)
+        for i in range(dmean.shape[0]):
+            contributions.append((dmean[i] * layer_weights[i,:]).detach().cpu().numpy())
+
+    contr_mat = np.vstack(contributions)
+    sparsity = (np.abs(contr_mat) <= sparsity_th).sum() / (contr_mat.shape[0]*contr_mat.shape[1])
+
+    return sparsity
+
 """plot"""
 def plot_score_distribution(ttest_df, epoch, mode, affected=True):
 
@@ -416,7 +438,7 @@ def plot_weight_distribution(model, epoch, mode):
     w = model.encoder.weight.detach().cpu().numpy().flatten()
     # Create a histogram
     plt.figure(figsize=(10, 6))
-    plt.hist(w, bins=30, color='blue', edgecolor='black', alpha=0.7)
+    plt.hist(w, bins=1000, color='blue', edgecolor='black', alpha=0.7)
 
     # Add labels and title
     plt.xlabel('Value', fontsize=14)
@@ -425,10 +447,12 @@ def plot_weight_distribution(model, epoch, mode):
 
     # Show gridlines for better readability
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.yscale('log')
     plt.xscale('log')
+    plt.yscale('log')
+    ax = plt.gca()
+    ax.set_xlim([1e-100,10])
     plt.tight_layout()
-    plt.savefig(os.path.join('./../../figures/ablation_study',f'ae_{mode}',f'ae_{mode}_encoder_1layer_hist_epoch_{epoch}.png'))
+    plt.savefig(os.path.join('./../../','figures','ablation_study','weight_matrices',f'ae_{mode}_encoder_1layer_hist_epoch_{epoch}.png'))
     plt.close()
     plt.clf()
     plt.cla()
