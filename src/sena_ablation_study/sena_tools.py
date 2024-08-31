@@ -460,7 +460,7 @@ def plot_weight_distribution(model, epoch, mode):
 """NA LAYER"""
 class NetActivity_layer(torch.nn.Module):
 
-    def __init__(self, input_genes, output_gs, relation_dict, bias = True, device = None, dtype = None, sp = 0):
+    def __init__(self, input_genes, output_gs, relation_dict, bias = False, device = None, dtype = None, sp = 0):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.input_genes = input_genes
@@ -479,20 +479,20 @@ class NetActivity_layer(torch.nn.Module):
         self.mask[self.mask == 0] = sp
 
         #apply sp
-
         self.weight = nn.Parameter(torch.empty((self.output_gs, self.input_genes), **factory_kwargs))
-        self.bias = None
 
-        # if bias:
-        #     self.bias = nn.Parameter(torch.empty(middle_layer, **factory_kwargs))
-        # else:
-        #     self.register_parameter('bias', None)
+        if bias:
+            self.bias = nn.Parameter(torch.empty(self.output_gs, **factory_kwargs))
+        else:
+            self.register_parameter('bias', None)
 
         self.reset_parameters()
 
     def forward(self, x):
-        return (x @ ((self.weight * self.mask.T).T))
-        #return (torch.sparse.mm(x, self.weight))
+        output = (x @ ((self.weight * self.mask.T).T))
+        if self.bias is not None:
+            return output + self.bias
+        return output
         
     def reset_parameters(self) -> None:
         # Setting a=sqrt(5) in kaiming_uniform is the same as initializing with

@@ -49,6 +49,7 @@ class Autoencoder2Layers(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
+        x = self.lrelu(x)
         x = self.delta(x)
         x = self.lrelu(x)
         x = self.decoder(x)
@@ -64,6 +65,26 @@ class SENA(nn.Module):
 
         # Encoder
         self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
+       
+        # Decoder
+        self.decoder = nn.Linear(latent_size, input_size)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.lrelu(x)
+        x = self.decoder(x)
+        return x
+
+class SENABias(nn.Module):
+
+    def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
+        super(SENABias, self).__init__()
+
+        # Activation Functions
+        self.lrelu = nn.LeakyReLU()
+
+        # Encoder
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp, bias=True)
        
         # Decoder
         self.decoder = nn.Linear(latent_size, input_size)
@@ -96,7 +117,6 @@ class SENADelta(nn.Module):
         x = self.decoder(x)
         return x
 
-
 def run_model(mode, seed, analysis = 'interpretability'):
 
     if mode == 'regular':
@@ -127,6 +147,12 @@ def run_model(mode, seed, analysis = 'interpretability'):
             sp_num = float(mode.split('_')[2])
             sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
             model = SENADelta(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
+
+        elif 'bias' in mode:
+
+            sp_num = float(mode.split('_')[2])
+            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
+            model = SENABias(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
         else:
             sp_num = float(mode.split('_')[1])
@@ -221,7 +247,7 @@ if __name__ == '__main__':
 
     #init 
     fpath = os.path.join('./../../result/ablation_study',f'ae_{modeltype}')
-    fname = os.path.join(fpath,f'autoencoder_{modeltype}_ablation_{analysis}_{nlayers}_{subsample}')
+    fname = os.path.join(fpath,f'autoencoder_{modeltype}_ablation_{analysis}_{nlayers}layer_{subsample}')
     results_dict = {}
 
     #if folder does not exist, create it

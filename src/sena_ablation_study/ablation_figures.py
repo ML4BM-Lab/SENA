@@ -14,7 +14,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
 
-def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
+def plot_mse_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
 
     def build_dataset():
 
@@ -32,7 +32,6 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
         return df
 
     #retrieve dataset
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
     colors = sns.color_palette("Set2", len(methods))
     df = build_dataset()
 
@@ -88,7 +87,7 @@ def plot_mse_analysis(mode = '1layer', subsample = 'topgo'):
     plt.clf()
     plt.close()
 
-def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
+def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
 
     def build_dataset():
 
@@ -106,7 +105,6 @@ def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
         return df
 
     #retrieve dataset
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
     colors = sns.color_palette("Set2", len(methods))
     df = build_dataset()
 
@@ -192,7 +190,7 @@ def plot_sparsity_analysis(mode = '1layer', subsample = 'topgo'):
     plt.clf()
     plt.close()
 
-def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff'):
+def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', methods = [], name = '', metric = 'z_diff'):
 
     def build_dataset():
 
@@ -207,7 +205,13 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff
         return df
 
     #retrieve dataset
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular','regular_orig', 'l1_3', 'l1_5', 'l1_7']
+
+    if name == '':
+        name = 'all'
+
+    if not len(methods):
+        methods = ['sena_0', 'sena_1', 'sena_3', 'regular','regular_orig', 'l1_3', 'l1_5', 'l1_7']
+        
     colors = sns.color_palette("Set2", len(methods))
 
     df = build_dataset()
@@ -245,7 +249,7 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', metric = 'z_diff
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_{metric}_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{name}_ablation_{mode}_{metric}_{subsample}.png'))
     plt.cla()
     plt.clf()
     plt.close()
@@ -286,16 +290,22 @@ def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'se
 if __name__ == '__main__':
     
     #compare sena vs regular
-    #plot_outlier_analysis(metric = 'z_diff', subsample = 'topgo')
-    #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'topgo')
+    methods = ['sena_bias_0', 'sena_bias_1', 'sena_bias_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo')
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
+
+    #senta-delta
+    # methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    # plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
+    # plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
 
     #plot_outlier_analysis(metric = 'z_diff', subsample = 'raw')
     #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'raw')
 
     #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
-    plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
+    #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
 
     #plot mse analysis
-    #plot_mse_analysis(mode = '1layer', subsample = 'topgo')
-    #plot_sparsity_analysis(mode = '1layer', subsample = 'topgo')
+    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
+    plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
     pass

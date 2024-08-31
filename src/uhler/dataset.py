@@ -50,7 +50,7 @@ class SCDataset(Dataset):
             self.ptb_samples = ptb_adata.X
             self.ptb_names = ptb_adata.obs['guide_ids'].values
             self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)
-            del ptb_adata
+            
 
         elif perturb_type == 'double':
 
@@ -62,7 +62,7 @@ class SCDataset(Dataset):
             self.ptb_samples = ptb_adata.X
             self.ptb_names = ptb_adata.obs['guide_ids'].values
             self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)
-            del ptb_adata   
+            
 
         else:
 
@@ -70,13 +70,13 @@ class SCDataset(Dataset):
             self.ptb_samples = ptb_adata.X
             self.ptb_names = ptb_adata.obs['guide_ids'].values
             self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)
-            del ptb_adata
+            
 
         self.ctrl_samples = adata[adata.obs['guide_ids']==''].X.copy()
         self.rand_ctrl_samples = self.ctrl_samples[
             np.random.choice(self.ctrl_samples.shape[0], self.ptb_samples.shape[0], replace=True)
             ]
-        del adata
+        self.adata = adata
 
     def __getitem__(self, item):
         x = torch.from_numpy(self.rand_ctrl_samples[item].toarray().flatten()).double()
