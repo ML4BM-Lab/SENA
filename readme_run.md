@@ -6,12 +6,15 @@ docker exec -it causal bash
 cd /wdir/src/uhler
 
 # regular architecture
-nohup python3 -u run.py --trainmode "regular" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_regular.out &
+nohup python3 -u run.py --trainmode "regular" --latdim 70 --seed 13 > ./../../logs/uhler/full_go_regular_seed_13.out &
 
 # our proposed encoder
-nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_0.out &
-nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1.out &
-nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_3.out &
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_0_seed_42.out &
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 13 > ./../../logs/uhler/full_go_sena_delta_0_seed_13.out &
+
+
+nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1_seed_42.out &
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_3_seed_42.out &
 
 # some other experiments
 # nohup python3 -u run.py --trainmode "NA_NA" --latdim 16 > ./../../logs/uhler/full_go_NA_NA_.out &

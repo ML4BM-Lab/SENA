@@ -1,5 +1,8 @@
 import networkx as nx
 import numpy as np
+import sys
+sys.path.append('./../')
+
 import matplotlib.pyplot as plt
 import scanpy as sc
 import pickle
@@ -16,7 +19,7 @@ import numpy as np
 def load_data_full_go(ptb_targets):
 
     #define url
-    datafile='./../../data/Norman2019_raw.h5ad'
+    datafile='./../../../data/Norman2019_raw.h5ad'
     adata = sc.read_h5ad(datafile)
 
     # load gos from NA paper
@@ -49,7 +52,7 @@ def load_data_full_go(ptb_targets):
 def load_data_raw_go(ptb_targets):
 
     #define url
-    datafile='./../../data/Norman2019_raw.h5ad'
+    datafile='./../../../data/Norman2019_raw.h5ad'
     adata = sc.read_h5ad(datafile)
 
     # load gos from NA paper
@@ -84,16 +87,17 @@ def load_data_raw_go(ptb_targets):
     return adata, perturbations_idx_dict, sorted(set(go_2_z_raw['PathwayID'].values)), sorted(set(go_2_z_raw['topGO'].values)) 
 
 ##load our model
+seed = 42
 mode_type = 'full_go'
-trainmode = 'regular'
-layertype = 'fc_var'
+trainmode = 'sena_delta_0'
+layertype = 'z'
 model_name = f'{mode_type}_{trainmode}'
-savedir = f'./../../result/{model_name}' 
+savedir = f'./../../../result/uhler/{model_name}/seed_{seed}' 
 model = torch.load(f'{savedir}/best_model.pt')
 
 ##get the output of NetActivity Layer
 batch_size, mode = 128, 'train'
-_, _, dim, cdim, ptb_targets = get_data(batch_size=batch_size, mode=mode)
+_, _, _, dim, cdim, ptb_targets = get_data(batch_size=batch_size, mode=mode)
 adata, idx_dict, gos, zs = load_data_raw_go(ptb_targets)
 
 netactivity_scores = []
@@ -130,4 +134,4 @@ for gene in tqdm(idx_dict, desc = 'generating activity score for perturbations')
 
 ##
 df_netactivity_scores = pd.concat(netactivity_scores)
-df_netactivity_scores.to_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layertype}.tsv'),sep='\t')
+df_netactivity_scores.to_csv(os.path.join('./../../../result','uhler',f'{mode_type}_{trainmode}',f'seed_{seed}',f'na_activity_scores_layer_{layertype}.tsv'),sep='\t')

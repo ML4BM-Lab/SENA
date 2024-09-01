@@ -528,7 +528,6 @@ class SCDATA_sampler(Sampler):
     def __len__(self):
         return self.len
 
-
 def chunk(indices, chunk_size):
     split = torch.split(torch.tensor(indices), chunk_size)
     

@@ -14,8 +14,8 @@ import seaborn as sns
 def visualize_data_generation(model_name = 'gosize5_orig_Adam'):
 
     #load data
-    adata = sc.read_h5ad('./../../data/Norman2019_raw.h5ad')
-    savedir = f'./../../result/{model_name}' 
+    adata = sc.read_h5ad('./../../../data/Norman2019_raw.h5ad')
+    savedir = f'./../../../result/{model_name}' 
 
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
         ptb_targets = pickle.load(f)
@@ -64,8 +64,8 @@ def visualize_data_generation_comparison(model_names = ['gosize5_orig_Adam']):
     def retrieve_single_run(model_name):
 
         #load data
-        adata = sc.read_h5ad('./../../data/Norman2019_raw.h5ad')
-        savedir = f'./../../result/{model_name}' 
+        adata = sc.read_h5ad('./../../../data/Norman2019_raw.h5ad')
+        savedir = f'./../../../result/{model_name}' 
 
         with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
             ptb_targets = pickle.load(f)
@@ -132,8 +132,8 @@ def visualize_data_generation_double_comparison(model_names = ['gosize5_orig_Ada
     def retrieve_single_run(model_name):
 
         #load data
-        adata = sc.read_h5ad('./../../data/Norman2019_raw.h5ad')
-        savedir = f'./../../result/{model_name}' 
+        adata = sc.read_h5ad('./../../../data/Norman2019_raw.h5ad')
+        savedir = f'./../../../result/{model_name}' 
 
         with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
             ptb_targets = pickle.load(f)

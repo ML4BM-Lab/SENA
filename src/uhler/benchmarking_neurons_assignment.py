@@ -20,19 +20,114 @@ from collections import Counter
 from scipy.stats import gaussian_kde
 import utils as ut
 
-## load our model
-mode_type = 'full_go'
-trainmode = 'regular'
-model_name = f'{mode_type}_{trainmode}'
+"""load data"""
 
-"""
-plot layer weights
-"""
+def load_data(model_name, seed):
 
+    def load_data_raw_go(ptb_targets):
+
+        #define url
+        datafile='./../../data/Norman2019_raw.h5ad'
+        adata = sc.read_h5ad(datafile)
+
+        # load gos from NA paper
+        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
+        GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
+
+        #load GOs
+        go_2_z_raw = pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')
+        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(go_2_z_raw['PathwayID'].values)]
+
+        ## load interventions
+        ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
+        ensembl_genename_mapping = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
+        intervention_genenames = map(lambda x: ensembl_genename_mapping.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
+        intervention_to_GO_assignment_genes = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
+            
+        assert all(np.array(sorted(ptb_targets)) == np.array(sorted(intervention_to_GO_assignment_genes)))
+        
+        # ## keep only GO_genes
+        adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
+        adata.obs = adata.obs.reset_index(drop=True)
+
+        ## get control
+        perturbations_idx_dict = {}
+        for knockout in ['ctrl'] + ptb_targets:
+
+            if knockout == 'ctrl':
+                perturbations_idx_dict[knockout] = (adata.obs[adata.obs['guide_ids'] == '']).index.values
+            else:
+                perturbations_idx_dict[knockout] = (adata.obs[adata.obs['guide_ids'] == knockout]).index.values
+
+        return adata, perturbations_idx_dict, sorted(set(go_2_z_raw['PathwayID'].values)), sorted(set(go_2_z_raw['topGO'].values)) 
+
+    #load model
+    savedir = f'./../../result/uhler/{model_name}/seed_{seed}' 
+    model = torch.load(f'{savedir}/best_model.pt')
+
+    ##get the output of NetActivity Layer
+    batch_size, mode = 128, 'train'
+    _, dataloader, _, _, _, ptb_targets = get_data(batch_size=batch_size, mode=mode)
+
+    #generate cs
+    if layer_name == 'u':
+        cs = []
+        for X in dataloader:
+            cs.append(X[2])
+        c = np.vstack(cs)
+
+    adata, idx_dict, gos, zs = load_data_raw_go(ptb_targets)
+    return model, adata, idx_dict, gos, zs
+
+"""compute activation scores"""
+def compute_activation_scores(layer_name, model, adata, idx_dict, gos, zs):
+
+    netactivity_scores = []
+    for knockout in idx_dict:
+        
+        idx = idx_dict[knockout]
+        mat = torch.from_numpy(adata.X[idx,:].todense()).to('cuda').double()
+
+        if layer_name == 'fc1':
+            colnames = gos
+            na_score = model.fc1(mat).detach().cpu().numpy()
+
+        elif layer_name == 'fc_mean':
+            na_score = model.fc_mean(model.fc1(mat)).detach().cpu().numpy()
+            colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
+        elif layer_name == 'fc_var':
+            na_score = model.fc_var(model.fc1(mat)).detach().cpu().numpy()
+            colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
+        elif layer_name == 'z':
+
+            mu, var = model.encode(mat)
+            z = model.reparametrize(mu, var).detach().cpu().numpy()
+            na_score = z
+            colnames = zs if na_score.shape[1] == len(zs) else list(range(na_score.shape[1]))
+
+        elif layer_name == 'u':
+
+            bc, csz = model.c_encode(torch.from_numpy(c).to('cuda:0'), temp=1)
+            mu, var = model.encode(mat)
+            z = model.reparametrize(mu, var)
+            u = model.dag(z, bc, csz, bc, csz, num_interv=1).detach().cpu().numpy()
+
+        ##
+        na_score_df = pd.DataFrame(na_score)
+        na_score_df.columns = colnames
+        na_score_df['type'] = knockout
+        netactivity_scores.append(na_score_df)
+
+    df_netactivity_scores = pd.concat(netactivity_scores)
+    return df_netactivity_scores
+
+"""plot layer weights"""
 def plot_layer_weights(layer_name):
 
     # read different trained models here
-    fpath = os.path.join('./../../figures','uhler_paper',f'{mode_type}_{trainmode}')
+    fpath = os.path.join('./../../figures','uhler',f'{mode_type}_{trainmode}')
     savedir = f'./../../result/{model_name}' 
     model = torch.load(f'{savedir}/best_model.pt')
 
@@ -48,70 +143,11 @@ def plot_layer_weights(layer_name):
     plt.title(f'Layer {layer_name} weights')
     plt.savefig(os.path.join(fpath, f'{model_name}_layer_{layer_name}_histplot.png'))
 
-#plot_layer_weights(layer_name = 'fc_mean')
-#plot_layer_weights(layer_name = 'fc_var')
-
-"""
-analyze the latent factor relationship to perturbation
-"""
-
-def analyze_latent_factor_relationship(layer_name, only_analysis=False):
-
-    def compute_IAS(heatmap_logfc_data, metric = 'max'):   
-
-        outliers_distr = []
-        for gene in heatmap_logfc_data.index:
-            
-            #get distr scores
-            distr = heatmap_logfc_data.loc[gene].values
-
-            #compute z-score
-            zscore = distr - distr.mean() / distr.std()
-            
-            #check if its normal
-            shapiro_test = stats.shapiro(zscore).pvalue
-            
-            ##kde
-            kde = gaussian_kde(zscore)
-            
-            for outlier in sorted(zscore, reverse=True):
-                
-                #compute the pvalue of getting this value or more extreme
-                outlier_pval_gauss = 1 - stats.norm.cdf(outlier, loc=0, scale=1)
-                outlier_pval_kde = kde.evaluate(outlier)[0]
-
-                if shapiro_test >= 0.001:
-                    outlier_pval = outlier_pval_gauss
-                else:
-                    outlier_pval = outlier_pval_kde
-                
-                ##
-                print(outlier_pval)
-                if outlier_pval <= 0.05:
-                    outliers_distr.append([gene,outlier_pval])
-                else:
-                    break
-
-        try:
-
-            df = pd.DataFrame(outliers_distr)
-            df.columns = ['gene','outlier_pval']
-
-            """
-            compute the outlier_activation metric
-            """
-            num_tot_interventions = heatmap_logfc_data.shape[0]
-            freq_interventions = sum([(heatmap_logfc_data.shape[1] - x) / (heatmap_logfc_data.shape[1]-1) for x in df.groupby('gene').apply(lambda x: x.shape[0]).values])
-            outlier_activation_metric = (1/num_tot_interventions) * freq_interventions
-        
-            return outlier_activation_metric
-
-        except:
-            return 0
+"""analyze latent factors"""
+def generate_latent_factor_matrix(na_activity_score, model_name, layer_name, seed, norm=False, var = 'absdm', save=False):
 
     #load activity scores
-    fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv')
-    na_activity_score = pd.read_csv(fpath,sep='\t',index_col=0)
+    fpath = os.path.join('./../../result','uhler',model_name, f'seed_{seed}')
 
     ## define control cells
     ctrl_cells = na_activity_score[na_activity_score['type'] == 'ctrl']
@@ -119,70 +155,7 @@ def analyze_latent_factor_relationship(layer_name, only_analysis=False):
     ## init df
     ttest_df = []
 
-    for knockout in tqdm(set(na_activity_score['type'])):
-    
-        if knockout != 'ctrl':
-
-            #get knockout cells
-            knockout_cells = na_activity_score[na_activity_score['type']  == knockout]
-
-            for geneset in na_activity_score.columns[:-1]:
-
-                #perform ttest
-                _, p_value = ttest_ind(ctrl_cells.loc[:,geneset].values, knockout_cells.loc[:,geneset].values, equal_var=False)
-                
-                ## abs(logFC)
-                knockout_mean = knockout_cells.loc[:,geneset].values.mean() 
-                ctrl_mean = ctrl_cells.loc[:,geneset].values.mean()
-
-                if (not ctrl_mean) or (not knockout_mean):
-                    abslogfc = 0
-                else:
-                    abslogfc = knockout_mean - ctrl_mean
-            
-                #append info
-                ttest_df.append([knockout, geneset, p_value, abslogfc])
-                
-    ## build df
-    ttest_df = pd.DataFrame(ttest_df)
-    ttest_df.columns = ['knockout','geneset','pval', 'abslogfc']
-    ttest_df = ttest_df.sort_values(by=['knockout','geneset']).reset_index(drop=True)
-
-    # Pivot the DataFrame to create a matrix for the heatmap
-    heatmap_data = ttest_df.pivot(index="knockout", columns="geneset", values="pval")
-    heatmap_data = heatmap_data.dropna(axis=1)
-    heatmap_logfc_data = ttest_df.pivot(index="knockout", columns="geneset", values="abslogfc")
-    heatmap_logfc_data = heatmap_logfc_data.dropna(axis=1)
-
-    ## check if only analysis is required
-    if only_analysis:
-        return compute_IAS(heatmap_logfc_data)
-    
-    heatmap_logfc_data = (heatmap_logfc_data.T/heatmap_logfc_data.max(axis=1)).T
-
-    """
-    save log-scaled heatmap
-    """
-    log_heatmap_data = -np.log10(heatmap_data)
-    log_heatmap_data = (log_heatmap_data.T/log_heatmap_data.max(axis=1)).T
-    fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}')
-    log_heatmap_data.to_csv(os.path.join(fpath, f'activation_scores_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
-    heatmap_logfc_data.to_csv(os.path.join(fpath, f'activation_scores_logFC_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
-    
-def analyze_latent_factor_DM(layer_name, norm=False):
-
-    #load activity scores
-    fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}')
-    fpath_figures = os.path.join('./../../figures','uhler_paper',f'{mode_type}_{trainmode}', 'activation_scores','general_analysis')
-    na_activity_score = pd.read_csv(os.path.join(fpath, f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
-
-    ## define control cells
-    ctrl_cells = na_activity_score[na_activity_score['type'] == 'ctrl']
-
-    ## init df
-    ttest_df = []
-
-    for knockout in tqdm(set(na_activity_score['type'])):
+    for knockout in set(na_activity_score['type']):
     
         if knockout != 'ctrl':
 
@@ -196,211 +169,58 @@ def analyze_latent_factor_DM(layer_name, norm=False):
                 ctrl_mean = ctrl_cells.loc[:,geneset].values.mean()
 
                 if (not ctrl_mean) or (not knockout_mean):
-                    diffmean, absdm, logabsdm, abslogabsdm = 0,0,0,0
+                    diffmean, absdm,= 0,0
                 else:
-                    diffmean = knockout_mean - ctrl_mean
+                    diffmean = ctrl_mean - knockout_mean
                     absdm = abs(diffmean)
-                    logabsdm = np.log(absdm)
-                    abslogabsdm = np.abs(logabsdm)
             
                 #append info
-                ttest_df.append([knockout, geneset, diffmean, absdm, logabsdm, abslogabsdm])
+                ttest_df.append([knockout, geneset, diffmean, absdm])
                 
     ## build df
     ttest_df = pd.DataFrame(ttest_df)
-    ttest_df.columns = ['knockout','geneset', 'diffmean', 'absdm', 'logabsdm', 'abslogabsdm']
+    ttest_df.columns = ['knockout','geneset', 'diffmean', 'absdm']
     ttest_df = ttest_df.sort_values(by=['knockout','geneset']).reset_index(drop=True)
 
-    # Create a figure and a set of subplots
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-    # Flatten the axes array for easy iteration
-    variables =  ['diffmean', 'absdm', 'logabsdm', 'abslogabsdm']
-    axes = axes.flatten()
-
-    # Plotting histograms for each variable
-    for ax, var in zip(axes, variables):
-        # Pivot the DataFrame to create a matrix for the heatmap
-        heatmap_data = ttest_df.pivot(index="knockout", columns="geneset", values=var).dropna(axis=1)
-
-        if norm:
-            heatmap_data = (heatmap_data.T/heatmap_data.max(axis=1)).T
-            heatmap_data.to_csv(os.path.join(fpath, f'activation_scores_{var}_DEA_layer_{layer_name}_norm_matrix.tsv'), sep='\t')
-        
-        else:
-            heatmap_data.to_csv(os.path.join(fpath, f'activation_scores_{var}_DEA_layer_{layer_name}_matrix.tsv'), sep='\t')
-    
-
-        # Plot histogram
-        heatmap_data.values.flatten()  # Flatten the matrix to a 1D array
-        ax.hist(heatmap_data.values.flatten(), bins=30, alpha=0.7, color='blue')
-        ax.set_title(f'Histogram of {var} - layer {layer_name} - model {mode_type}_{trainmode}')
-        ax.set_xlabel(var)
-        ax.set_ylabel('Frequency')
-
-    # Adjust layout
-    plt.tight_layout()
-
+    ##regroup
+    heatmap_data = ttest_df.pivot(index="knockout", columns="geneset", values=var).dropna(axis=1)
     if norm:
-        plt.savefig(os.path.join(fpath_figures, f'activation_scores_DEA_layer_{layer_name}_hist_norm.png'))
-    else:
-        plt.savefig(os.path.join(fpath_figures, f'activation_scores_DEA_layer_{layer_name}_hist.png'))
-
-def interpretable_disentanglement(layer_name):
-
-    def compute_metric(heatmap_logfc_data, mode = 'twice_std'):   
-
-        def compute_IAS():
-            
-            outliers_distr = []
-            for gene in heatmap_logfc_data.index:
-                
-                #get distr scores
-                zscore = heatmap_logfc_data.loc[gene].values
-                
-                #check if its normal
-                shapiro_test = stats.shapiro(zscore).pvalue
-                
-                ##kde
-                kde = gaussian_kde(zscore)
-                
-                for outlier in sorted(zscore, reverse=True):
-                    
-                    #compute the pvalue of getting this value or more extreme
-                    outlier_pval_gauss = 1 - stats.norm.cdf(outlier, loc=0, scale=1)
-                    outlier_pval_kde = kde.evaluate(outlier)[0]
-
-                    if shapiro_test >= 0.001:
-                        outlier_pval = outlier_pval_gauss
-                    else:
-                        outlier_pval = outlier_pval_kde
-                    
-                    ##
-                    ##print(outlier_pval)
-                    if outlier_pval <= 0.05:
-                        outliers_distr.append([gene,outlier_pval])
-                    else:
-                        break
-            
-            return outliers_distr
-
-        def compute_IAS_th(th=0.95):
-
-            outliers_distr = []
-            for gene in heatmap_logfc_data.index:
-                
-                #get distr scores
-                zscore = heatmap_logfc_data.loc[gene].values
-                                
-                for outlier in sorted(zscore, reverse=True):
-                    
-                    ##
-                    if outlier >= 0.95:
-                        outliers_distr.append([gene,outlier])
-                    else:
-                        break
-            
-            return outliers_distr
-
-        def compute_IAS_std():
-            
-            outliers_distr = []
-            for gene in heatmap_logfc_data.index:
-                
-                #get distr scores
-                zscore = heatmap_logfc_data.loc[gene].values
-                                
-                for outlier in sorted(zscore, reverse=True):
-                    
-                    ##
-                    if outlier >= (zscore.mean() + 2*zscore.std()):
-                        outliers_distr.append([gene,outlier])
-                    else:
-                        break
-            
-            return outliers_distr
-
-        try:
-            
-            ##
-            if mode == 'th':
-                outliers_distr = compute_IAS_th() 
-            elif mode == 'kde':
-                outliers_distr = compute_IAS()
-            elif mode == 'twice_std': 
-                outliers_distr = compute_IAS_std()
-
-
-            df = pd.DataFrame(outliers_distr)
-            df.columns = ['gene','outlier_metric']
-
-            """
-            compute the outlier_activation metric
-            """
-            num_tot_interventions = heatmap_logfc_data.shape[0]
-            freq_interventions = sum([(heatmap_logfc_data.shape[1] - x) / (heatmap_logfc_data.shape[1]-1) for x in df.groupby('gene').apply(lambda x: x.shape[0], include_groups=False).values])
-            outlier_activation_metric = (1/num_tot_interventions) * freq_interventions
-        
-            return outlier_activation_metric
-
-        except:
-            return 0
-
-    #load activity scores
-    fpath = os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv')
-    na_activity_score = pd.read_csv(fpath,sep='\t',index_col=0)
-
-    ## define control cells
-    ctrl_cells = na_activity_score[na_activity_score['type'] == 'ctrl']
-
-    ## init df
-    ttest_df = []
-
-    for knockout in tqdm(set(na_activity_score['type'])):
+        heatmap_data = (heatmap_data.T/heatmap_data.max(axis=1)).T
+    if save:
+        heatmap_data.to_csv(os.path.join(fpath, f'activation_scores_{var}_DEA_layer_{layer_name}_{"norm" if norm else ""}_matrix.tsv'), sep='\t')
     
-        if knockout != 'ctrl':
+    return heatmap_data
 
-            #get knockout cells
-            knockout_cells = na_activity_score[na_activity_score['type']  == knockout]
+"""analyze activation independence"""
+def compute_differential_activation_independence(heatmap_data):
+    latent_assignment = np.argmax(heatmap_data,axis=0)
+    return len(set(latent_assignment)) / len(latent_assignment)
 
-            for geneset in na_activity_score.columns[:-1]:
 
-                ## abs(logFC)
-                knockout_mean = knockout_cells.loc[:,geneset].values.mean() 
-                ctrl_mean = ctrl_cells.loc[:,geneset].values.mean()
+## load our model
+mode_type = 'full_go'
+results_l = {}
 
-                if (not ctrl_mean) or (not knockout_mean):
-                    diffmean, absdm, logabsdm, abslogabsdm = 0,0,0,0
-                else:
-                    diffmean = knockout_mean - ctrl_mean
-                    absdm = abs(diffmean)
-                    logabsdm = np.log(absdm)
-                    abslogabsdm = np.abs(logabsdm)
-            
-                #append info
-                ttest_df.append([knockout, geneset, diffmean, absdm, logabsdm, abslogabsdm])
-                
-    ## build df
-    ttest_df = pd.DataFrame(ttest_df)
-    ttest_df.columns = ['knockout','geneset', 'diffmean', 'absdm', 'logabsdm', 'abslogabsdm']
-    ttest_df = ttest_df.sort_values(by=['knockout','geneset']).reset_index(drop=True)
+for trainmode in ['regular','sena_delta_0', 'sena_delta_1','sena_delta_3']:
 
-    # Pivot the DataFrame to create a matrix for the heatmap
-    for mode in ['th','kde','twice_std']:
-        for var in ['diffmean', 'absdm', 'logabsdm', 'abslogabsdm']:
-            ##
-            heatmap_data = ttest_df.pivot(index="knockout", columns="geneset", values=var).dropna(axis=1)
-            print(f"mode: {mode}, layer_name: {layer_name}, var: {var} - IAS: {compute_metric(heatmap_data, mode)}")
-            heatmap_data = (heatmap_data.T/heatmap_data.max(axis=1)).T
-            print(f"mode: {mode}, layer_name: {layer_name}, var: {var} ROW NORM - IAS: {compute_metric(heatmap_data, mode)}")
+    model_name = f'{mode_type}_{trainmode}'
+    seed = 42
+    layer_name = 'z'
 
-##
-#analyze_latent_factor_relationship(layer_name = 'fc_mean', only_analysis=True)
-#analyze_latent_factor_relationship(layer_name = 'fc_var', only_analysis=True)
+    #load data
+    dai_l = []
+    model, adata, idx_dict, gos, zs = load_data(model_name, seed)
+
+    ## get AS
+    for _ in tqdm(range(1000)):
+        na_activity_score = compute_activation_scores(layer_name, model, adata, idx_dict, gos, zs)
+        heatmap_data = generate_latent_factor_matrix(na_activity_score, model_name = model_name, layer_name = layer_name, seed=seed, var='absdm', norm=True, save=False)
+        dai_l.append(compute_differential_activation_independence(heatmap_data))
+
+    ##compute dai
+    dai_mean, dai_st = np.mean(dai_l), np.std(dai_l)
+    results_l[trainmode] = f'{dai_mean} +- {dai_st}'
     
-#analyze_latent_factor_relationship(layer_name = 'fc1', only_analysis=True)
-#analyze_latent_factor_relationship(layer_name = 'z', only_analysis=True)
-
-##
-analyze_latent_factor_DM(layer_name = 'z', norm=True)
-##interpretable_disentanglement(layer_name = 'fc1')
+#build dataframe
+results_df = pd.DataFrame(results_l, index = [0]).T
+results_df.to_csv(os.path.join('./../../result/uhler/diff_act_independence/summary.tsv'),sep='\t')

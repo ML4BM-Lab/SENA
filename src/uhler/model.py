@@ -134,17 +134,17 @@ class CMVAE(nn.Module):
             self.fc_var = nn.Linear(len(gos), z_dim)
             weights_init(self.fc_var)
 
-        elif mode == 'NA_NA':
+        # elif mode == 'NA_NA':
 
-            dataset = dataloader.dataset.dataset
-            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
+        #     dataset = dataloader.dataset.dataset
+        #     gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
 
-            #first, connect initial gene space to gene sets
-            self.fc1 = SparseGO_NetActivity(self.dim, len(gos), len(gos), rel_dict, device=device)
+        #     #first, connect initial gene space to gene sets
+        #     self.fc1 = SparseGO_NetActivity(self.dim, len(gos), len(gos), rel_dict, device=device)
 
-            rel_latent_dict = ut.build_gene_go_relationships_latent_deltas(gos)
-            self.fc_mean = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
-            self.fc_var = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
+        #     rel_latent_dict = ut.build_gene_go_relationships_latent_deltas(gos)
+        #     self.fc_mean = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
+        #     self.fc_var = SparseGO_NetActivity(len(gos), z_dim, z_dim, rel_latent_dict, device=device)
 
         elif mode[:4] == 'sena':
 

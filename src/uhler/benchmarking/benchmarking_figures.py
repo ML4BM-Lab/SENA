@@ -1,3 +1,5 @@
+import sys
+sys.path.append('./../')
 import numpy as np
 import importlib
 from scipy.stats import ttest_ind
@@ -11,10 +13,10 @@ import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = 42 
 matplotlib.rcParams['ps.fonttype'] = 42
 
-def plot_metric(df, dataset, mode, metric='recall_at_100', methods = []):
+def plot_groupal_metric(df, dataset, mode, metric='recall_at_100', methods = []):
 
     #define fpath
-    fpath = os.path.join('./../../figures', 'uhler_paper', f'{dataset}_{mode}','layer_analysis')
+    fpath = os.path.join('./../../../figures', 'uhler', 'all_models')
     if not os.path.exists(fpath):
         os.makedirs(fpath)
 
@@ -49,24 +51,34 @@ def plot_metric(df, dataset, mode, metric='recall_at_100', methods = []):
     plt.xlabel('Epoch', fontsize=14)
     plt.ylabel('Metric Mean', fontsize=14)
     plt.title('Metric vs. Epoch for Different Methods', fontsize=16)
+    if ('recall' not in metric) and ('z_diff' not in metric):
+        plt.yscale('log')
 
     # Add gridlines for better readability
     plt.grid(True, linestyle='--', alpha=0.6)
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join(fpath, f'analysis_{metric}.png'))
+    plt.savefig(os.path.join(fpath, f'{dataset}_{mode}_analysis_{metric}.png'))
     plt.cla()
     plt.clf()
     plt.close() 
 
 dataset = 'full_go'
-mode = 'regular'
-seed = 42
-name = f'{dataset}_{mode}/seed_{seed}'
+mode = 'encoder'
+seed = 13
 
 #load summary
-summary_df = pd.read_csv(os.path.join('./../../', 'result', 'uhler', name, f'uhler_{mode}_summary.tsv'),sep='\t',index_col=0)
+summary_l = []
+methods = ['sena_delta_0','regular'] #'sena_delta_1', 'sena_delta_3'
+for method in methods:
+    summary_l.append(pd.read_csv(os.path.join('./../../../', 'result', 'uhler', f'{dataset}_{method}/seed_{seed}', f'uhler_{method}_summary.tsv'),sep='\t',index_col=0))
+summary_df = pd.concat(summary_l)
 
 #plot
-plot_metric(summary_df, dataset, mode, metric='mmd_loss', methods = ['regular'])
+plot_groupal_metric(summary_df, dataset, mode, metric='recall_at_100', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='z_diff', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='mmd_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='recon_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='kl_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='l1_loss', methods = methods)

@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 def load_data_raw_go(ptb_targets):
 
     #define url
-    datafile='./../../data/Norman2019_raw.h5ad'
+    datafile='./../../../data/Norman2019_raw.h5ad'
     adata = sc.read_h5ad(datafile)
 
     # load gos from NA paper
@@ -58,10 +58,10 @@ def load_data_raw_go(ptb_targets):
 
     return adata, perturbations_idx_dict, sorted(set(go_2_z_raw['PathwayID'].values)), sorted(set(go_2_z_raw['topGO'].values)) 
 
-def compute_metrics(model_name = 'full_go'):
+def compute_metrics(model_name = 'full_go', seed = 42):
 	
     # read different trained models here
-    savedir = f'./../../result/{model_name}' 
+    savedir = f'./../../../result/uhler/{model_name}/seed_{seed}' 
 
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
         ptb_targets = pickle.load(f)
@@ -155,18 +155,19 @@ def compute_metrics(model_name = 'full_go'):
 
     ## concat
     df = pd.concat([df_train, df_test, df_double]).reset_index(drop=True)
-    df.to_csv(os.path.join('./../../','result', model_name, f'{model_name}_mmd_r2_rmse.tsv'),sep='\t')
+    print(df)
+    df.to_csv(os.path.join('./../../../','result', 'uhler', model_name, f'seed_{seed}', f'{model_name}_mmd_r2_rmse_metrics_summary.tsv'),sep='\t')
 
 def visualize_gradients(model_name = 'full_go'):
 
     # read different trained models here
-    savedir = f'./../../result/{model_name}' 
+    savedir = f'./../../../result/{model_name}' 
     model = torch.load(f'{savedir}/best_model.pt')
 
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
         ptb_targets = pickle.load(f)
 
-    fpath = os.path.join('./../../','figures','uhler_paper',model_name)
+    fpath = os.path.join('./../../../','figures','uhler_paper',model_name)
     if not os.path.isdir(fpath):
         os.mkdir(fpath)
 
@@ -241,10 +242,11 @@ def visualize_gradients(model_name = 'full_go'):
     #plot_weight_heatmap(layer_name='fc_var', model=model, fpath=fpath)
 
 ## model name
-model_name = 'full_go_NA+deltas'
+model_name = 'full_go_sena_delta_0'
+seed = 13
 
 ## compute metrics
-##compute_metrics(model_name = model_name)
+compute_metrics(model_name = model_name, seed = seed)
 
 ## visualize gradients
-visualize_gradients(model_name = model_name) 
+##visualize_gradients(model_name = model_name) 

@@ -20,7 +20,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
 
         ##load our model
         model_name = f'{mode_type}_{trainmode}'
-        savedir = f'./../../result/{model_name}' 
+        savedir = f'./../../../result/{model_name}' 
         model = torch.load(f'{savedir}/best_model.pt')
         
         return model
@@ -64,7 +64,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
     def load_data_raw_go(ptb_targets):
 
         #define url
-        datafile='./../../data/Norman2019_raw.h5ad'
+        datafile='./../../../data/Norman2019_raw.h5ad'
         adata = sc.read_h5ad(datafile)
 
         # load gos from NA paper
@@ -244,7 +244,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
     mode_type = 'full_go'
     trainmode = 'NA+deltas'
     
-    fpath = os.path.join('./../../','figures','uhler_paper',f'{mode_type}_{trainmode}','activation_scores', target_knockout)
+    fpath = os.path.join('./../../../','figures','uhler_paper',f'{mode_type}_{trainmode}','activation_scores', target_knockout)
     if not os.path.isdir(fpath):
         os.mkdir(fpath)
 
@@ -258,7 +258,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
         ## fc_mean / zs
         layer_name = 'fc_mean'
         model, affected_zs, affected_genesets = modify_model(load_model(layertype = 'zs', layer_name = 'fc_mean'))
-        na_activity_score_fc_mean = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
+        na_activity_score_fc_mean = pd.read_csv(os.path.join('./../../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
         ctrl_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == 'ctrl']
         knockout_cells_fc_mean_raw = na_activity_score_fc_mean[na_activity_score_fc_mean['type'] == target_knockout]
         knockout_cells_fc_mean_mod = compute_activity_scores(model, layertype = 'zs')
@@ -268,7 +268,7 @@ def compute_scores_knockout_analysis(target_knockout = "CDKN1A"):
     ## fc1 / genesets
     layer_name = 'fc1'
     affected_zs, affected_genesets = get_affected_zs_and_genesets()
-    na_activity_score_fc1 = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
+    na_activity_score_fc1 = pd.read_csv(os.path.join('./../../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
     ctrl_cells_fc1 = na_activity_score_fc1[na_activity_score_fc1['type'] == 'ctrl']
     knockout_cells_fc1 = na_activity_score_fc1[na_activity_score_fc1['type'] == target_knockout]
     pvalues_df_fc1, ranking_df_fc1 = compute_pvalues_and_median_rank(ctrl_cells_fc1, knockout_cells_fc1, knockout_cells_fc1, affected_genesets)

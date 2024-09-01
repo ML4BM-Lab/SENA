@@ -139,7 +139,7 @@ def evaluate_double(model, path_to_ptbtargets, device, mode, temp=1):
 	with open(f'{path_to_ptbtargets}/ptb_targets.pkl', 'rb') as f:
 		ptb_targets = pickle.load(f)
 	##
-	dataloader, _, _, _ = get_data(mode='test', perturb_targets=ptb_targets)
+	_, dataloader, _, _, _ = get_data(mode='test', perturb_targets=ptb_targets)
 
 	return evaluate_generated_samples(model, dataloader, device, temp, numint=2, mode=mode)
 

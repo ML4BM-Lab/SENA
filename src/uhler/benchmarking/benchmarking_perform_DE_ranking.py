@@ -25,7 +25,7 @@ model_name = f'{mode_type}_{trainmode}'
 def compute_knockout_ranking(var = 'pval'):
 
     #load activity scores
-    na_activity_score = pd.read_csv(os.path.join('./../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
+    na_activity_score = pd.read_csv(os.path.join('./../../../result',f'{mode_type}_{trainmode}',f'na_activity_scores_layer_{layer_name}.tsv'),sep='\t',index_col=0)
 
     ## define control cells
     ctrl_cells = na_activity_score[na_activity_score['type'] == 'ctrl']
@@ -164,7 +164,7 @@ def analyze_best_and_worse_performers(ranking_analysis_knockouts):
 
 ## compute ranking
 ranking_analysis_knockouts = compute_knockout_ranking(var = 'logfc')
-ranking_analysis_knockouts.to_csv(os.path.join('./../../','result', f'{mode_type}_{trainmode}',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t')
+ranking_analysis_knockouts.to_csv(os.path.join('./../../../','result', f'{mode_type}_{trainmode}',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t')
 
 ## plot analysis
 analyze_ranking(ranking_analysis_knockouts, var = 'logfc')
@@ -177,8 +177,8 @@ plot results together
 def analyze_ranking_models_combined():
 
     #load models
-    ranking_SENA_2 = pd.read_csv(os.path.join('./../../','result', f'{mode_type}_NA_NA',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t', index_col=0)
-    ranking_SENA_delta = pd.read_csv(os.path.join('./../../','result', f'{mode_type}_NA+deltas',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t', index_col=0)
+    ranking_SENA_2 = pd.read_csv(os.path.join('./../../../','result', f'{mode_type}_NA_NA',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t', index_col=0)
+    ranking_SENA_delta = pd.read_csv(os.path.join('./../../../','result', f'{mode_type}_NA+deltas',f'ranking_analysis_knockout_{layer_name}.tsv'),sep='\t', index_col=0)
     ranking_analysis = pd.concat([ranking_SENA_2[['med_rank_NA', 'min_rank_NA']], ranking_SENA_delta[['med_rank_NA', 'min_rank_NA']], ranking_SENA_2[['med_rank_rand','min_rank_rand']]],axis=1)
     ranking_analysis.columns = ['med_rank_SENA-2', 'min_rank_SENA-2', 'med_rank_SENA-delta', 'min_rank_SENA-delta','med_rank_rand','min_rank_rand']
 

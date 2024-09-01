@@ -119,7 +119,7 @@ def generate_DAG():
     cb.outline.set_visible(False)
     plt.title('G (no threshold)')
     plt.tight_layout()
-    plt.savefig(os.path.join('./../../','result', model_name, f'{model_name}_DAG_dense.png'))
+    plt.savefig(os.path.join('./../../../','result', model_name, f'{model_name}_DAG_dense.png'))
 
     ## plot the graph
     G = np.multiply(G_dense, abs(G_dense)>0.005)
@@ -135,7 +135,7 @@ def generate_DAG():
 def generate_regulatory_programs():
 
     #load model
-    savedir = f'./../../result/{model_name}' 
+    savedir = f'./../../../result/{model_name}' 
     model = torch.load(f'{savedir}/best_model.pt')
 
     with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
