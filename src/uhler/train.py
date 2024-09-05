@@ -10,7 +10,6 @@ import importlib
 import model as mod
 from collections import defaultdict, Counter
 importlib.reload(mod)
-#from model import CMVAE, Example
 from utils import MMD_loss, compute_activation_df, compute_outlier_activation_analysis, load_norman_2019_dataset
 
 # fit CMVAE to data
@@ -35,13 +34,6 @@ def train(
         dataloader = dataloader,
         mode = opts.trainmode
     )
-
-    # cvae = mod.CVAE(dim = opts.dim,
-    #     z_dim = opts.latdim,
-    #     c_dim = opts.cdim,
-    #     device = device, 
-    #     dataloader = dataloader,
-    #     mode = opts.trainmode)
 
     cmvae.double()
     cmvae.to(device)
@@ -135,9 +127,6 @@ def train(
             #best_model = deepcopy(cmvae)
             torch.save(cmvae, os.path.join(savedir, 'best_model.pt'))
 
-        kk = [np.argmax(np.bincount(dd[k])) for k in dd]
-        us = len(set(kk))/len(kk)
-    
         ## report
         ttest_df = compute_activation_df(cmvae, adata, gos, scoretype = 'mu_diff', mode = mode)
         summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
@@ -146,9 +135,12 @@ def train(
         summary_analysis_ep['recon_loss'] = reconAv/ct
         summary_analysis_ep['kl_loss'] = klAv/ct
         summary_analysis_ep['l1_loss'] = (L1/ct).__float__()
-        summary_analysis_ep['uniqueness_score_intervention'] = us
-        print(f"uniqueness_score:{us}")
 
+        #add uniqueness score
+        kk = [np.argmax(np.bincount(dd[k])) for k in dd]
+        us = len(set(kk))/len(kk)
+        summary_analysis_ep['uniqueness_score_intervention'] = us
+        
         #append
         results.append(summary_analysis_ep)
 

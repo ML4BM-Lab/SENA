@@ -64,9 +64,9 @@ if __name__ == '__main__':
 	parser.add_argument('--model', type=str, default='cmvae', help='model to run the training')
 	parser.add_argument('--name', type=str, default=f'full_go', help='name of the run')
 	parser.add_argument('--trainmode', type = str, default = 'regular')
-	parser.add_argument('--latdim', type = int, default = 16)
+	parser.add_argument('--latdim', type = int, default = 70)
 	parser.add_argument('--seed', type = int, default = 42)
-	parser.add_argument('--epochs', type=int, default = 250)
+	parser.add_argument('--epochs', type=int, default = 100)
 	args = parser.parse_args()
 	
 	#concat

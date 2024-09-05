@@ -7,7 +7,7 @@ import scanpy as sc
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import Sampler
-from dataset import SCDataset, SimuDataset
+from dataset import SCDataset
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
@@ -49,6 +49,7 @@ class MMD_loss(nn.Module):
         return loss
 
 """tools"""
+
 def build_gene_go_relationships_latent(in_dim, out_dim):
 
     #init relationships dict
@@ -344,7 +345,6 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
 
     return pd.DataFrame(outlier_activation_dict, index = [0])
 
-
 """"""
 
 def build_gene_go_relationships(dataset):
@@ -409,7 +409,8 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         )
 
         return dataset.adata, dataloader, dataloader2, dim, cdim, ptb_genes
-    else:	
+    else:
+
         dataloader = DataLoader(
             dataset,
             batch_sampler=SCDATA_sampler(dataset, batch_size),
@@ -422,69 +423,6 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         cdim = dataset[0][2].shape[0]
 
         return dataset.adata, dataloader, dim, cdim, ptb_genes
-
-def get_simu_data(batch_size=32, mode='train', perturb_targets=None):
-    assert mode in ['train', 'test'], 'mode not supported!'
-
-    if mode == 'train':
-        dataset = SimuDataset(perturb_type='single', perturb_targets=perturb_targets)
-        train_idx, test_idx = split_simudata(
-            dataset,
-            batch_size=batch_size
-        ) # leave out some cells from the top 14 single target-gene interventions
-    elif mode == 'test':
-        assert perturb_targets is not None, 'perturb_targets has to be specified during testing, otherwise the index might be mismatched!'
-        dataset = SimuDataset(perturb_type='double', perturb_targets=perturb_targets)
-
-    ptb_genes = dataset.ptb_targets
-        
-    if mode == 'train':
-        dataset1 = Subset(dataset, train_idx)
-        ptb_name = dataset.ptb_names[train_idx]
-        dataloader = DataLoader(
-            dataset1,
-            batch_sampler=SCDATA_sampler(dataset1, batch_size, ptb_name),
-            num_workers=0
-        )
-
-        dim = dataset[0][0].shape[0]
-        cdim = dataset[0][2].shape[0]
-
-        dataset2 = Subset(dataset, test_idx)
-        ptb_name = dataset.ptb_names[test_idx]
-        dataloader2 = DataLoader(
-            dataset2,
-            batch_sampler=SCDATA_sampler(dataset2, batch_size, ptb_name),
-            num_workers=0
-        )
-        return dataloader, dataloader2, dim, cdim, ptb_genes, dataset.nonlinear
-    else:	
-        dataloader = DataLoader(
-            dataset,
-            batch_sampler=SCDATA_sampler(dataset, batch_size),
-            num_workers=0
-        )
-        
-        dim = dataset[0][0].shape[0]
-        cdim = dataset[0][2].shape[0]
-
-        return dataloader, dim, cdim, ptb_genes, dataset.nonlinear
-
-def split_simudata(simudataset, batch_size=32):
-    num_sample = 1024
-
-    test_idx = []
-    train_idx = []
-    from tqdm import tqdm
-    for ptb in tqdm(simudataset.ptb_targets):
-        idx = list(np.where(simudataset.ptb_names == ptb)[0])
-        test_idx.append(idx[0:num_sample])
-        train_idx.append(idx[num_sample:2*num_sample])
-
-    test_idx = list(np.hstack(test_idx))
-    train_idx = list(np.hstack(train_idx)) 
-    
-    return train_idx, test_idx
 
 # leave out some cells from the split_ptbs
 def split_scdata(scdataset, split_ptbs, batch_size=32):

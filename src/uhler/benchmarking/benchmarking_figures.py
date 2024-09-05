@@ -66,7 +66,7 @@ def plot_groupal_metric(df, dataset, mode, metric='recall_at_100', methods = [])
 
 dataset = 'full_go'
 mode = 'encoder'
-seeds = [42, 13]
+seeds = [7]
 
 #load summary
 summary_l = []
@@ -80,8 +80,8 @@ summary_df = pd.concat(summary_l)
 
 #plot
 plot_groupal_metric(summary_df, dataset, mode, metric='recall_at_100', methods = methods)
-# plot_groupal_metric(summary_df, dataset, mode, metric='z_diff', methods = methods)
-# plot_groupal_metric(summary_df, dataset, mode, metric='mmd_loss', methods = methods)
-# plot_groupal_metric(summary_df, dataset, mode, metric='recon_loss', methods = methods)
-# plot_groupal_metric(summary_df, dataset, mode, metric='kl_loss', methods = methods)
-# plot_groupal_metric(summary_df, dataset, mode, metric='l1_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='z_diff', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='mmd_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='recon_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='kl_loss', methods = methods)
+plot_groupal_metric(summary_df, dataset, mode, metric='l1_loss', methods = methods)

@@ -2,28 +2,10 @@ import torch
 import numpy as np
 import pickle
 from argparse import Namespace
-
 from utils import get_data
 
 
 def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='CMVAE'):
-
-	opts = Namespace(
-		batch_size = 128,
-		mode = 'train',
-		lr = 1e-3,
-		epochs = 50,
-		grad_clip = False,
-		mxAlpha = 10,
-		mxBeta = 2,
-		mxTemp = 5,
-		lmbda = 1e-3,
-		MMD_sigma = 1000,
-		kernel_num = 10,
-		matched_IO = False,
-		latdim = None,
-		seed = 12
-	)
 
 	model = model.to(device)
 	model.eval()
@@ -56,51 +38,7 @@ def evaluate_generated_samples(model, dataloader, device, temp, numint=1, mode='
 				if numint == 1:
 					y_hat, x_recon, z_mu, z_var, G = model(x, c, c, num_interv=1, temp=temp)
 				else: 
-					# ############ debug
-					# bc, csz = model.c_encode(c1, temp=temp)
-					# bc2, csz2 = model.c_encode(c2, temp=temp)
-					# mu, var = model.encode(x)
-					# z = model.reparametrize(mu, var)
-					# zinterv = z * (1. - bc - bc2) + bc * csz.reshape(-1,1)/2 + bc2 * csz2.reshape(-1,1)/2
-					# u = (zinterv) @ torch.inverse(torch.eye(model.z_dim).to(model.device) -  torch.triu((model.G), diagonal=1))   
-					# y_hat = model.decode(u)
 					y_hat, x_recon, z_mu, z_var, G = model(x, c1, c2, num_interv=2, temp=temp)	
-
-			elif mode=='CVAE':
-				if numint == 1:
-					bc, csz = model.c_encode(c, temp=temp)
-					z = torch.DoubleTensor(bc.size()).normal_().to(device)
-					u = model.dag(z, bc, csz, bc, csz, num_interv=1)
-					y_hat = model.decode(u)
-				else:
-					bc, csz = model.c_encode(c1, temp=temp)
-					bc2, csz2 = model.c_encode(c2, temp=temp)
-					z = torch.DoubleTensor(bc.size()).normal_().to(device)
-					u = model.dag(z, bc, csz, bc2, csz2, num_interv=2)
-					y_hat = model.decode(u)	
-
-			elif mode=='CVAE-obs':
-				if numint == 1:
-					bc, csz = model.c_encode(c, temp=temp)
-					mu, var = model.encode(x)
-					mu_z = model.reverse_dag(mu, None, None, None, None, num_interv=0)
-					z = model.reparametrize(mu_z, var)
-					u = model.dag(z, bc, csz, bc, csz, num_interv=1)
-					y_hat = model.decode(u)
-				else:
-					bc, csz = model.c_encode(c1, temp=temp)
-					bc2, csz2 = model.c_encode(c2, temp=temp)
-					mu, var = model.encode(x)
-					mu_z = model.reverse_dag(mu, None, None, None, None, num_interv=0)
-					z = model.reparametrize(mu_z, var)
-					u = model.dag(z, bc, csz, bc2, csz2, num_interv=2)
-					y_hat = model.decode(u)	
-
-			elif mode=='MVAE':
-				if numint == 1:
-					y_hat, _, _, _ = model(x, c, c, num_interv=1, temp=temp)
-				else:
-					y_hat, _, _, _ = model(x, c1, c2, num_interv=2, temp=temp)						
 
 		gt_x.append(x.cpu().numpy())
 		gt_y.append(y.numpy())
