@@ -57,7 +57,7 @@ class NetActivity_layer(torch.nn.Module):
 # "dim" specifies the sample dimension; "c_dim" specifies the dimension of the intervention encoding.
 #  "z_dim" specifies the dimension of the latent space.
 class CMVAE(nn.Module):
-    def __init__(self, dim, z_dim, c_dim, dataloader = None, device=None, mode = 'regular'):
+    def __init__(self, dim, z_dim, c_dim, device=None, mode = 'regular', gos=None, rel_dict=None):
 
         super(CMVAE, self).__init__()
 
@@ -74,9 +74,6 @@ class CMVAE(nn.Module):
 
         if mode == 'regular':
 
-            dataset = dataloader.dataset.dataset
-            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
-
             self.fc1 = nn.Linear(self.dim, len(gos))
             weights_init(self.fc1)
             self.fc_mean = nn.Linear(len(gos), z_dim)
@@ -85,10 +82,6 @@ class CMVAE(nn.Module):
             weights_init(self.fc_var)
 
         elif mode[:4] == 'sena':
-
-            #hids = z_dim * 2 #from 128 to double of the latent space dimensions
-            dataset = dataloader.dataset.dataset
-            gos, genes, rel_dict = ut.build_gene_go_relationships(dataset)
 
             #connect initial gene space to gene sets
             sp_num = float(mode.split('_')[2])

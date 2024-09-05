@@ -26,13 +26,15 @@ def train(
     if log:
         wandb.init(project='cmvae', name=savedir.split('/')[-1])  
 
+    adata, _, ptb_targets, _, gos, rel_dict = load_norman_2019_dataset()
     cmvae = mod.CMVAE(
         dim = opts.dim,
         z_dim = opts.latdim,
         c_dim = opts.cdim,
         device = device, 
-        dataloader = dataloader,
-        mode = opts.trainmode
+        mode = opts.trainmode,
+        gos = gos, 
+        rel_dict = rel_dict
     )
 
     cmvae.double()
@@ -59,7 +61,6 @@ def train(
     min_train_loss = np.inf
     results = []
     mode = opts.trainmode
-    adata, ptb_targets, _, gos, _ = load_norman_2019_dataset()
 
     #best_model = deepcopy(cmvae)
     for n in range(0, opts.epochs):

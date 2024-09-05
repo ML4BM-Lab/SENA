@@ -66,11 +66,11 @@ def plot_groupal_metric(df, dataset, mode, metric='recall_at_100', methods = [])
 
 dataset = 'full_go'
 mode = 'encoder'
-seeds = [7]
+seeds = [7, 13, 42]
 
 #load summary
 summary_l = []
-methods = ['sena_delta_0','regular'] #'sena_delta_1', 'sena_delta_3'
+methods = ['sena_delta_0','regular', 'sena_delta_1', 'sena_delta_3']
 for method in methods:
     for seed in seeds:
         df = pd.read_csv(os.path.join('./../../../', 'result', 'uhler', f'{dataset}_{method}/seed_{seed}', f'uhler_{method}_summary.tsv'),sep='\t',index_col=0)

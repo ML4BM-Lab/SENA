@@ -7,13 +7,15 @@ import scanpy as sc
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 from torch.utils.data.sampler import Sampler
-from dataset import SCDataset
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 from scipy.stats import ttest_ind
 import math as m
 from random import sample
+import pickle
+from torch.utils.data import Dataset
+
 
 """activation score"""
 
@@ -233,6 +235,20 @@ def load_norman_2019_dataset(subsample = 'topgo'):
 
         return ptb_targets, ptb_targets_ens
 
+    def build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment):
+
+        ## get genes
+        genes = adata.var.index.values
+        go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
+        rel_dict = defaultdict(list)
+        gene_set, go_set = set(genes), set(gos)
+
+        for go, gen in tqdm(zip(GO_to_ensembl_id_assignment['GO_id'], GO_to_ensembl_id_assignment['ensembl_id']), total = GO_to_ensembl_id_assignment.shape[0]):
+            if (gen in gene_set) and (go in go_set):
+                rel_dict[gen_dict[gen]].append(go_dict[go])
+
+        return rel_dict
+
     #define fpath
     fpath = './../../data/Norman2019_raw.h5ad'
 
@@ -253,30 +269,12 @@ def load_norman_2019_dataset(subsample = 'topgo'):
     #keep only perturbations affecting at least one gene set
     adata = adata[adata.obs['guide_ids'].isin(ptb_targets+[''])]
 
-    #(adata.var_names.isin(ptb_targets_ens)).sum()
+    """double data"""
+    double_adata = sc.read_h5ad(fpath).copy()
+    double_adata = double_adata[:, double_adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
+    double_adata = double_adata[(double_adata.obs['guide_ids'].str.contains(',')) & (double_adata.obs['guide_ids'].map(lambda x: all([y in ptb_targets for y in x.split(',')])))]
 
-    return adata, ptb_targets, ptb_targets_ens, gos, rel_dict
-
-def build_gene_go_relationships(dataset):
-
-    ## get genes
-    genes = dataset.genes
-
-    GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
-    GO_to_ensembl_id_assignment.columns = ['GO_id','ensembl_id']
-    gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
-    GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(gos)]
-
-    ## get genes
-    go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
-    rel_dict = defaultdict(list)
-    gene_set, go_set = set(genes), set(gos)
-
-    for go, gen in tqdm(zip(GO_to_ensembl_id_assignment['GO_id'], GO_to_ensembl_id_assignment['ensembl_id']), total = GO_to_ensembl_id_assignment.shape[0]):
-        if (gen in gene_set) and (go in go_set):
-            rel_dict[gen_dict[gen]].append(go_dict[go])
-
-    return gos, genes, rel_dict
+    return adata, double_adata, ptb_targets, ptb_targets_ens, gos, rel_dict
 
 def get_data(batch_size=32, mode='train', perturb_targets=None):
     assert mode in ['train', 'test'], 'mode not supported!'
@@ -318,7 +316,7 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
             #batch_size=batch_size
         )
 
-        return dataset.adata, dataloader, dataloader2, dim, cdim, ptb_genes
+        return dataloader, dataloader2, dim, cdim, ptb_genes
     else:
 
         dataloader = DataLoader(
@@ -335,6 +333,65 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         return dataset.adata, dataloader, dim, cdim, ptb_genes
 
 """ data sampler"""
+
+# read the norman dataset.
+# map the target genes of each cell to a binary vector, using a target gene list "perturb_targets".
+# "perturb_type" specifies whether the returned object contains single trarget-gene samples, double target-gene samples, or both.
+class SCDataset(Dataset):
+    def __init__(self, datafile='./../../data/Norman2019_raw.h5ad', perturb_type='single', perturb_targets=None):
+        super(Dataset, self).__init__()
+        assert perturb_type in ['single', 'double'], 'perturb_type not supported!'
+
+        adata, double_adata, ptb_targets, _, _, _ = load_norman_2019_dataset()
+
+        #get genes and ptb targets
+        self.genes = adata.var.index.tolist()
+        self.ptb_targets = ptb_targets
+        
+        if perturb_type == 'single':
+            
+            ptb_adata = adata[(~adata.obs['guide_ids'].str.contains(',')) & (adata.obs['guide_ids']!='')].copy()
+
+            #keep only cells containing our perturbed genes
+            ptb_adata = ptb_adata[ptb_adata.obs['guide_ids'].isin(ptb_targets), :]
+
+            self.ptb_samples = ptb_adata.X
+            self.ptb_names = ptb_adata.obs['guide_ids'].values
+            self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)
+            
+        elif perturb_type == 'double':
+
+            ptb_adata = double_adata[(adata.obs['guide_ids'].str.contains(',')) & (adata.obs['guide_ids']!='')].copy()
+
+            #keep only cells containing our perturbed genes
+            ptb_adata = ptb_adata[ptb_adata.obs['guide_ids'].apply(lambda x: all([y in ptb_targets for y in x.split(',')])), :]
+
+            self.ptb_samples = ptb_adata.X
+            self.ptb_names = ptb_adata.obs['guide_ids'].values
+            self.ptb_ids = map_ptb_features(self.ptb_targets, ptb_adata.obs['guide_ids'].values)            
+
+        self.ctrl_samples = adata[adata.obs['guide_ids']==''].X.copy()
+        self.rand_ctrl_samples = self.ctrl_samples[
+            np.random.choice(self.ctrl_samples.shape[0], self.ptb_samples.shape[0], replace=True)
+            ]
+        
+
+    def __getitem__(self, item):
+        x = torch.from_numpy(self.rand_ctrl_samples[item].toarray().flatten()).double()
+        y = torch.from_numpy(self.ptb_samples[item].toarray().flatten()).double()
+        c = torch.from_numpy(self.ptb_ids[item]).double()
+        return x, y, c
+    
+    def __len__(self):
+        return self.ptb_samples.shape[0]
+
+def map_ptb_features(all_ptb_targets, ptb_ids):
+    ptb_features = []
+    for id in ptb_ids:
+        feature = np.zeros(all_ptb_targets.__len__())
+        feature[[all_ptb_targets.index(i) for i in id.split(',')]] = 1
+        ptb_features.append(feature)
+    return np.vstack(ptb_features)
 
 class SCDATA_sampler(Sampler):
     def __init__(self, scdataset, batchsize, ptb_name=None):
