@@ -80,7 +80,7 @@ def plot_mse_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_test_mse_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_test_mse_{subsample}.pdf'))
 
     # Clear the plot
     plt.cla()
@@ -106,6 +106,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
 
     #retrieve dataset
     colors = sns.color_palette("Set2", len(methods))
+    color_mapping = dict(zip(methods, colors))
     df = build_dataset()
 
     # Group by epoch and mode, then calculate the median and IQR for test_mse
@@ -151,7 +152,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}.pdf'))
 
     # Clear the plot
     plt.cla()
@@ -170,7 +171,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
     plt.figure(figsize=(10, 6))
 
     # Create a barplot with error bars for the sparsity
-    sns.barplot(x='mode', y='sparsity_mean', data=grouped_sparsity, palette='Set2', ci=None)
+    sns.barplot(x='mode', y='sparsity_mean', data=grouped_sparsity, palette=color_mapping, ci=None)
     plt.errorbar(x=np.arange(len(grouped_sparsity['mode'])), 
                 y=grouped_sparsity['sparsity_mean'], 
                 yerr=grouped_sparsity['sparsity_stderr'], 
@@ -183,7 +184,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo'):
     plt.ylabel('Mean Sparsity', fontsize=14)
     plt.title(f'Sparsity by Mode at Epoch {df["epoch"].max()+1}', fontsize=16)
 
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}_last_epoch.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_all_ablation_1layer_sparsity_{subsample}_last_epoch.pdf'))
 
     # Clear the plot
     plt.cla()
@@ -249,7 +250,7 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', methods = [], na
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{name}_ablation_{mode}_{metric}_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{name}_ablation_{mode}_{metric}_{subsample}.pdf'))
     plt.cla()
     plt.clf()
     plt.close()
@@ -282,22 +283,53 @@ def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'se
     plt.grid(True, linestyle='--', alpha=0.6)
 
     # Show the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{modeltype}_ablation_{mode}_{analysis}_{epoch}_{subsample}.png'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'ae_{modeltype}_ablation_{mode}_{analysis}_{epoch}_{subsample}.pdf'))
     plt.cla()
     plt.clf()
     plt.close()
+
+def compute_recall_metrics(mode = '1layer', methods = [], subsample = 'topgo', metric = 'recall_at_25'):
+
+    def build_dataset():
+
+        ##
+        arch_l = []
+        for arch in methods:
+            
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'ae_{arch}',f'autoencoder_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_l.append(arch_test_mse)
+        
+        df = pd.concat(arch_l)
+        return df
+
+    df = build_dataset()
+
+    grouped = df.groupby(['epoch', 'mode']).agg(
+            metric_mean=(metric, 'mean'),
+            metric_std=(metric, 'std')
+            ).reset_index()
+    
+    subset_lepoch = grouped[grouped['epoch'] == grouped['epoch'].max()].reset_index(drop=True)
+    for i in range(subset_lepoch.shape[0]):
+        print(f'{subset_lepoch["mode"].iloc[i]}, {metric}: {subset_lepoch["metric_mean"].iloc[i]} +- {subset_lepoch["metric_std"].iloc[i]}')
 
 if __name__ == '__main__':
     
     #compare sena vs regular
     methods = ['sena_bias_0', 'sena_bias_1', 'sena_bias_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo')
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
+    #plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo')
+    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
+    compute_recall_metrics(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
+    compute_recall_metrics(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo')
 
-    #senta-delta
-    # methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    # plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
-    # plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
+
+    #sena-delta
+    methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    #plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
+    #plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
+    compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
+    compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
+
 
     #plot_outlier_analysis(metric = 'z_diff', subsample = 'raw')
     #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'raw')
@@ -306,6 +338,6 @@ if __name__ == '__main__':
     #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
 
     #plot mse analysis
-    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
-    plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
-    pass
+    #methods = ['sena_bias_0', 'sena_bias_1', 'sena_bias_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
+    #plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')

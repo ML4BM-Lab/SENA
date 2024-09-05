@@ -59,26 +59,29 @@ def plot_groupal_metric(df, dataset, mode, metric='recall_at_100', methods = [])
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join(fpath, f'{dataset}_{mode}_analysis_{metric}.png'))
+    plt.savefig(os.path.join(fpath, f'{dataset}_{mode}_analysis_{metric}.pdf'))
     plt.cla()
     plt.clf()
     plt.close() 
 
 dataset = 'full_go'
 mode = 'encoder'
-seed = 13
+seeds = [42, 13]
 
 #load summary
 summary_l = []
 methods = ['sena_delta_0','regular'] #'sena_delta_1', 'sena_delta_3'
 for method in methods:
-    summary_l.append(pd.read_csv(os.path.join('./../../../', 'result', 'uhler', f'{dataset}_{method}/seed_{seed}', f'uhler_{method}_summary.tsv'),sep='\t',index_col=0))
+    for seed in seeds:
+        df = pd.read_csv(os.path.join('./../../../', 'result', 'uhler', f'{dataset}_{method}/seed_{seed}', f'uhler_{method}_summary.tsv'),sep='\t',index_col=0)
+        df['seed'] = seed
+        summary_l.append(df)
 summary_df = pd.concat(summary_l)
 
 #plot
 plot_groupal_metric(summary_df, dataset, mode, metric='recall_at_100', methods = methods)
-plot_groupal_metric(summary_df, dataset, mode, metric='z_diff', methods = methods)
-plot_groupal_metric(summary_df, dataset, mode, metric='mmd_loss', methods = methods)
-plot_groupal_metric(summary_df, dataset, mode, metric='recon_loss', methods = methods)
-plot_groupal_metric(summary_df, dataset, mode, metric='kl_loss', methods = methods)
-plot_groupal_metric(summary_df, dataset, mode, metric='l1_loss', methods = methods)
+# plot_groupal_metric(summary_df, dataset, mode, metric='z_diff', methods = methods)
+# plot_groupal_metric(summary_df, dataset, mode, metric='mmd_loss', methods = methods)
+# plot_groupal_metric(summary_df, dataset, mode, metric='recon_loss', methods = methods)
+# plot_groupal_metric(summary_df, dataset, mode, metric='kl_loss', methods = methods)
+# plot_groupal_metric(summary_df, dataset, mode, metric='l1_loss', methods = methods)

@@ -21,7 +21,6 @@ from scipy.stats import gaussian_kde
 import utils as ut
 
 """load data"""
-
 def load_data(model_name, seed):
 
     def load_data_raw_go(ptb_targets):

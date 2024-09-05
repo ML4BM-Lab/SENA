@@ -14,14 +14,14 @@ def main(args):
 	print(f'using device: {args.device}')
 
 	opts = Namespace(
-		batch_size = 128,
+		batch_size = 32,
 		mode = 'train',
 		lr = 1e-3,
 		epochs = args.epochs,
 		grad_clip = False,
 		mxAlpha = 1,
 		mxBeta = 1,
-		mxTemp = 5,
+		mxTemp = 100,
 		lmbda = 0.1,
 		MMD_sigma = 200,
 		kernel_num = 10,

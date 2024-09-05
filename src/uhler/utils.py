@@ -390,7 +390,9 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         dataloader = DataLoader(
             dataset1,
             batch_sampler=SCDATA_sampler(dataset1, batch_size, ptb_name),
-            num_workers=0
+            num_workers=0,
+            #shuffle=True,
+            #batch_size=batch_size
         )
         
         dim = dataset[0][0].shape[0]
@@ -401,7 +403,9 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         dataloader2 = DataLoader(
             dataset2,
             batch_sampler=SCDATA_sampler(dataset2, 8, ptb_name), #using 8 coz 20% of cells somtimes is lower than 128 and it drops that gene
-            num_workers=0
+            num_workers=0,
+            #shuffle=True,
+            #batch_size=batch_size
         )
 
         return dataset.adata, dataloader, dataloader2, dim, cdim, ptb_genes
@@ -409,7 +413,9 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         dataloader = DataLoader(
             dataset,
             batch_sampler=SCDATA_sampler(dataset, batch_size),
-            num_workers=0
+            num_workers=0,
+            #shuffle=True,
+            #batch_size=batch_size
         )
         
         dim = dataset[0][0].shape[0]

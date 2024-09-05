@@ -6,10 +6,12 @@ from copy import deepcopy
 import numpy as np
 import os
 import pandas as pd
-
-from model import CMVAE
+import importlib
+import model as mod
+from collections import defaultdict, Counter
+importlib.reload(mod)
+#from model import CMVAE, Example
 from utils import MMD_loss, compute_activation_df, compute_outlier_activation_analysis, load_norman_2019_dataset
-
 
 # fit CMVAE to data
 def train(
@@ -25,7 +27,7 @@ def train(
     if log:
         wandb.init(project='cmvae', name=savedir.split('/')[-1])  
 
-    cmvae = CMVAE(
+    cmvae = mod.CMVAE(
         dim = opts.dim,
         z_dim = opts.latdim,
         c_dim = opts.cdim,
@@ -34,9 +36,15 @@ def train(
         mode = opts.trainmode
     )
 
+    # cvae = mod.CVAE(dim = opts.dim,
+    #     z_dim = opts.latdim,
+    #     c_dim = opts.cdim,
+    #     device = device, 
+    #     dataloader = dataloader,
+    #     mode = opts.trainmode)
+
     cmvae.double()
     cmvae.to(device)
-
     optimizer = torch.optim.Adam(params=cmvae.parameters(), lr=opts.lr) #do not use Adam if sparse 
 
     cmvae.train()
@@ -45,11 +53,11 @@ def train(
     ## Loss parameters
     beta_schedule = torch.zeros(opts.epochs) # weight on the KLD
     beta_schedule[:10] = 0
-    beta_schedule[10:] = torch.linspace(0,opts.mxBeta,opts.epochs-10) 
+    beta_schedule[10:] = torch.linspace(0, opts.mxBeta, opts.epochs-10) 
     alpha_schedule = torch.zeros(opts.epochs) # weight on the MMD
     alpha_schedule[:] = opts.mxAlpha
     alpha_schedule[:5] = 0
-    alpha_schedule[5:int(opts.epochs/2)] = torch.linspace(0,opts.mxAlpha,int(opts.epochs/2)-5) 
+    alpha_schedule[5:int(opts.epochs/2)] = torch.linspace(0, opts.mxAlpha, int(opts.epochs/2)-5) 
     alpha_schedule[int(opts.epochs/2):] = opts.mxAlpha
 
     ## Softmax temperature 
@@ -69,6 +77,7 @@ def train(
         reconAv = 0
         klAv = 0
         L1Av = 0
+        dd = defaultdict(list)
         for (i, X) in enumerate(dataloader):
             
             x = X[0]
@@ -81,9 +90,10 @@ def train(
                 c = c.to(device)
                 
             optimizer.zero_grad()
-            y_hat, x_recon, z_mu, z_var, G = cmvae(x, c, c, num_interv=1, temp=temp_schedule[n])
+            y_hat, x_recon, z_mu, z_var, G, bc = cmvae(x, c, c, num_interv=1, temp=temp_schedule[n])
             mmd_loss, recon_loss, kl_loss, L1 = loss_function(y_hat, y, x_recon, x, z_mu, z_var, G, opts.MMD_sigma, opts.kernel_num, opts.matched_IO)
             loss = alpha_schedule[n] * mmd_loss + recon_loss + beta_schedule[n]*kl_loss + opts.lmbda*L1
+            loss = recon_loss
             loss.backward()
             if opts.grad_clip:
                 for param in cmvae.parameters():
@@ -91,6 +101,11 @@ def train(
                     if param.grad is not None:
                         param.grad.data = param.grad.data.clamp(min=-0.5, max=0.5)
             optimizer.step()
+
+            #append
+            v = bc.argmax(axis=1)
+            for i,pert in enumerate(c.argmax(axis=1)):
+                dd[int(pert.__float__())].append(int(v[i].__float__()))
 
             ct += 1
             lossAv += loss.detach().cpu().numpy()
@@ -120,6 +135,9 @@ def train(
             #best_model = deepcopy(cmvae)
             torch.save(cmvae, os.path.join(savedir, 'best_model.pt'))
 
+        kk = [np.argmax(np.bincount(dd[k])) for k in dd]
+        us = len(set(kk))/len(kk)
+    
         ## report
         ttest_df = compute_activation_df(cmvae, adata, gos, scoretype = 'mu_diff', mode = mode)
         summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
@@ -128,6 +146,8 @@ def train(
         summary_analysis_ep['recon_loss'] = reconAv/ct
         summary_analysis_ep['kl_loss'] = klAv/ct
         summary_analysis_ep['l1_loss'] = (L1/ct).__float__()
+        summary_analysis_ep['uniqueness_score_intervention'] = us
+        print(f"uniqueness_score:{us}")
 
         #append
         results.append(summary_analysis_ep)
@@ -137,7 +157,6 @@ def train(
     print(results_df)
     #last_model = deepcopy(cmvae)
     #torch.save(last_model, os.path.join(savedir, 'last_model.pt'))
-
 
 # loss function definition
 def loss_function(y_hat, y, x_recon, x, mu, var, G, MMD_sigma, kernel_num, matched_IO=False):
