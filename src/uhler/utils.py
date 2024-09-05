@@ -13,175 +13,9 @@ from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 from scipy.stats import ttest_ind
 import math as m
+from random import sample
 
-## MMD LOSS
-class MMD_loss(nn.Module):
-    def __init__(self, kernel_mul = 2.0, kernel_num = 5, fix_sigma=None):
-        super().__init__()
-        self.kernel_num = kernel_num
-        self.kernel_mul = kernel_mul
-        self.fix_sigma = fix_sigma
-        return
-    def gaussian_kernel(self, source, target, kernel_mul=2.0, kernel_num=5, fix_sigma=None):
-        n_samples = int(source.size()[0])+int(target.size()[0])
-        total = torch.cat([source, target], dim=0)
-
-        total0 = total.unsqueeze(0).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
-        total1 = total.unsqueeze(1).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
-        L2_distance = ((total0-total1)**2).sum(2) 
-        if fix_sigma:
-            bandwidth = fix_sigma
-        else:
-            bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
-        bandwidth /= kernel_mul ** (kernel_num // 2)
-        bandwidth_list = [bandwidth * (kernel_mul**i) for i in range(kernel_num)]
-        kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
-        return sum(kernel_val)
-
-    def forward(self, source, target):
-        batch_size = int(source.size()[0])
-        kernels = self.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=self.fix_sigma)
-        XX = kernels[:batch_size, :batch_size]
-        YY = kernels[batch_size:, batch_size:]
-        XY = kernels[:batch_size, batch_size:]
-        YX = kernels[batch_size:, :batch_size]
-        loss = torch.mean(XX + YY - XY -YX)
-        return loss
-
-"""tools"""
-
-def build_gene_go_relationships_latent(in_dim, out_dim):
-
-    #init relationships dict
-    rel_dict = defaultdict(list)
-    mult = in_dim//out_dim
-    for i in range(out_dim):
-        for j in range(mult):
-            rel_dict[mult*i+j].append(i)
-    return rel_dict
-
-def build_gene_go_relationships_latent_deltas(gos):
-
-    go_2_z_raw = pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')
-    numbered_zs = dict(zip(sorted(set(go_2_z_raw['topGO'])), range(16)))
-    go_2_z_raw.columns = ['GO', 'Z_name']
-    go_2_z_raw['Z'] = go_2_z_raw['Z_name'].apply(lambda x: numbered_zs[x])
-
-    #init relationships dict
-    rel_dict = defaultdict(list)
-    gos = list(gos)
-
-    ###
-    for go, z in zip(go_2_z_raw['GO'], go_2_z_raw['Z']):
-        rel_dict[gos.index(go)].append(z-1)
-    
-    return rel_dict
-
-def compute_affecting_perturbations(GO_to_ensembl_id_assignment, adata):
-
-    #filter interventions that not in any GO
-    ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
-    ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
-    ensembl_genename_mapping_rev = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
-
-    ##
-    intervention_genenames = map(lambda x: ensembl_genename_mapping_dict.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
-    ptb_targets = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
-    ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_rev[x], ptb_targets))
-
-    return ptb_targets, ptb_targets_ens
-
-def retrieve_direct_genes(adata, ptb_targets):
-    ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
-    ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
-    ensembl_genename_mapping_revdict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
-    ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_dict[x], ptb_targets))
-    ptb_targets_direct = [ensembl_genename_mapping_revdict[x] for x in ptb_targets_ens if x in adata.var_names]
-    return ptb_targets_direct
-
-"""tools v2"""
-
-def load_norman_2019_dataset(subsample = 'topgo'):
-
-    def load_gene_go_assignments(subsample):
-
-        #filter genes that are not in any GO
-        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
-        GO_to_ensembl_id_assignment.columns = ['GO_id', 'ensembl_id']
-        
-        #apply subsampling
-        if subsample == 'raw':
-            gos = sorted(set(GO_to_ensembl_id_assignment['GO_id'].values))
-
-        elif 'topgo' in subsample:
-
-            if 'topgo_' in subsample:
-
-                subsample_ratio = int(subsample.split('_')[1])/100
-                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
-
-                #select those gos that are not affected by perturbations
-                gos = sample(gos, len(gos) * subsample_ratio)
-
-            else:
-                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
-
-            #now filter by go
-            GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(gos)]
-
-        return gos, GO_to_ensembl_id_assignment
-
-    def compute_affecting_perturbations(GO_to_ensembl_id_assignment):
-
-        #filter interventions that not in any GO
-        ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
-        ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
-        ensembl_genename_mapping_rev = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
-
-        ##
-        intervention_genenames = map(lambda x: ensembl_genename_mapping_dict.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
-        ptb_targets = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
-        ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_rev[x], ptb_targets))
-
-        return ptb_targets, ptb_targets_ens
-
-    def build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment):
-
-        ## get genes
-        genes = adata.var.index.values
-        go_dict, gen_dict = dict(zip(gos, range(len(gos)))), dict(zip(genes, range(len(genes))))
-        rel_dict = defaultdict(list)
-        gene_set, go_set = set(genes), set(gos)
-
-        for go, gen in tqdm(zip(GO_to_ensembl_id_assignment['GO_id'], GO_to_ensembl_id_assignment['ensembl_id']), total = GO_to_ensembl_id_assignment.shape[0]):
-            if (gen in gene_set) and (go in go_set):
-                rel_dict[gen_dict[gen]].append(go_dict[go])
-
-        return rel_dict
-
-    #define fpath
-    fpath = './../../data/Norman2019_raw.h5ad'
-
-    """keep only single interventions"""
-    adata = sc.read_h5ad(fpath)
-    adata = adata[(~adata.obs['guide_ids'].str.contains(','))]
-    
-    #drop genes that are not in any GO
-    gos, GO_to_ensembl_id_assignment = load_gene_go_assignments(subsample)
-    adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
-
-    #compute perturbations with at least 1 gene set
-    ptb_targets, ptb_targets_ens = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
-
-    #build gene-go rel
-    rel_dict = build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment)
-    
-    #keep only perturbations affecting at least one gene set
-    adata = adata[adata.obs['guide_ids'].isin(ptb_targets+[''])]
-
-    #(adata.var_names.isin(ptb_targets_ens)).sum()
-
-    return adata, ptb_targets, ptb_targets_ens, gos, rel_dict
+"""activation score"""
 
 def build_activity_score_df(model, adata):
 
@@ -301,6 +135,14 @@ def compute_activation_df(model, adata, gos, scoretype = 'ttest', mode = 'sena')
 
 def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'sena'):
 
+    def retrieve_direct_genes(adata, ptb_targets):
+        ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
+        ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
+        ensembl_genename_mapping_revdict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
+        ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_dict[x], ptb_targets))
+        ptb_targets_direct = [ensembl_genename_mapping_revdict[x] for x in ptb_targets_ens if x in adata.var_names]
+        return ptb_targets_direct
+
     ## correct pvalues
     if ttest_df['scoretype'].iloc[0] == 'ttest':
         ttest_df['score'] = ttest_df['score'].fillna(1)
@@ -345,7 +187,75 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
 
     return pd.DataFrame(outlier_activation_dict, index = [0])
 
-""""""
+"""Data related """
+
+def load_norman_2019_dataset(subsample = 'topgo'):
+
+    def load_gene_go_assignments(subsample):
+
+        #filter genes that are not in any GO
+        GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
+        GO_to_ensembl_id_assignment.columns = ['GO_id', 'ensembl_id']
+        
+        #apply subsampling
+        if subsample == 'raw':
+            gos = sorted(set(GO_to_ensembl_id_assignment['GO_id'].values))
+
+        elif 'topgo' in subsample:
+
+            if 'topgo_' in subsample:
+
+                subsample_ratio = int(subsample.split('_')[1])/100
+                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
+
+                #select those gos that are not affected by perturbations
+                gos = sample(gos, len(gos) * subsample_ratio)
+
+            else:
+                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
+
+            #now filter by go
+            GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(gos)]
+
+        return gos, GO_to_ensembl_id_assignment
+
+    def compute_affecting_perturbations(GO_to_ensembl_id_assignment):
+
+        #filter interventions that not in any GO
+        ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
+        ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
+        ensembl_genename_mapping_rev = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
+
+        ##
+        intervention_genenames = map(lambda x: ensembl_genename_mapping_dict.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
+        ptb_targets = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
+        ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_rev[x], ptb_targets))
+
+        return ptb_targets, ptb_targets_ens
+
+    #define fpath
+    fpath = './../../data/Norman2019_raw.h5ad'
+
+    """keep only single interventions"""
+    adata = sc.read_h5ad(fpath)
+    adata = adata[(~adata.obs['guide_ids'].str.contains(','))]
+    
+    #drop genes that are not in any GO
+    gos, GO_to_ensembl_id_assignment = load_gene_go_assignments(subsample)
+    adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
+
+    #compute perturbations with at least 1 gene set
+    ptb_targets, ptb_targets_ens = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
+
+    #build gene-go rel
+    rel_dict = build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment)
+    
+    #keep only perturbations affecting at least one gene set
+    adata = adata[adata.obs['guide_ids'].isin(ptb_targets+[''])]
+
+    #(adata.var_names.isin(ptb_targets_ens)).sum()
+
+    return adata, ptb_targets, ptb_targets_ens, gos, rel_dict
 
 def build_gene_go_relationships(dataset):
 
@@ -424,26 +334,8 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
 
         return dataset.adata, dataloader, dim, cdim, ptb_genes
 
-# leave out some cells from the split_ptbs
-def split_scdata(scdataset, split_ptbs, batch_size=32):
+""" data sampler"""
 
-    # num_batch = 96 // batch_size
-    # num_sample = num_batch * batch_size
-    pct = 0.2
-
-    test_idx = []
-    for ptb in split_ptbs:
-        idx = list(np.where(scdataset.ptb_names == ptb)[0])
-        #print(f"{ptb} - {idx}")
-        test_idx.append(np.random.choice(idx, int(len(idx)*pct), replace=False))
-        #test_idx.append(idx[0:num_sample])
-
-    test_idx = list(np.hstack(test_idx))
-    train_idx = [l for l in range(len(scdataset)) if l not in test_idx]
-    
-    return train_idx, test_idx
-
-# a special batch sampler that groups only cells from the same interventional distribution into a batch
 class SCDATA_sampler(Sampler):
     def __init__(self, scdataset, batchsize, ptb_name=None):
         self.intervindices = []
@@ -472,6 +364,24 @@ class SCDATA_sampler(Sampler):
     def __len__(self):
         return self.len
 
+def split_scdata(scdataset, split_ptbs, batch_size=32):
+
+    # num_batch = 96 // batch_size
+    # num_sample = num_batch * batch_size
+    pct = 0.2
+
+    test_idx = []
+    for ptb in split_ptbs:
+        idx = list(np.where(scdataset.ptb_names == ptb)[0])
+        #print(f"{ptb} - {idx}")
+        test_idx.append(np.random.choice(idx, int(len(idx)*pct), replace=False))
+        #test_idx.append(idx[0:num_sample])
+
+    test_idx = list(np.hstack(test_idx))
+    train_idx = [l for l in range(len(scdataset)) if l not in test_idx]
+    
+    return train_idx, test_idx
+
 def chunk(indices, chunk_size):
     split = torch.split(torch.tensor(indices), chunk_size)
     
@@ -482,3 +392,36 @@ def chunk(indices, chunk_size):
     else:
         return None
 
+"""MMD LOSS"""
+class MMD_loss(nn.Module):
+    def __init__(self, kernel_mul = 2.0, kernel_num = 5, fix_sigma=None):
+        super().__init__()
+        self.kernel_num = kernel_num
+        self.kernel_mul = kernel_mul
+        self.fix_sigma = fix_sigma
+        return
+    def gaussian_kernel(self, source, target, kernel_mul=2.0, kernel_num=5, fix_sigma=None):
+        n_samples = int(source.size()[0])+int(target.size()[0])
+        total = torch.cat([source, target], dim=0)
+
+        total0 = total.unsqueeze(0).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
+        total1 = total.unsqueeze(1).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
+        L2_distance = ((total0-total1)**2).sum(2) 
+        if fix_sigma:
+            bandwidth = fix_sigma
+        else:
+            bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
+        bandwidth /= kernel_mul ** (kernel_num // 2)
+        bandwidth_list = [bandwidth * (kernel_mul**i) for i in range(kernel_num)]
+        kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
+        return sum(kernel_val)
+
+    def forward(self, source, target):
+        batch_size = int(source.size()[0])
+        kernels = self.gaussian_kernel(source, target, kernel_mul=self.kernel_mul, kernel_num=self.kernel_num, fix_sigma=self.fix_sigma)
+        XX = kernels[:batch_size, :batch_size]
+        YY = kernels[batch_size:, batch_size:]
+        XY = kernels[:batch_size, batch_size:]
+        YX = kernels[batch_size:, :batch_size]
+        loss = torch.mean(XX + YY - XY -YX)
+        return loss

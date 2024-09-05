@@ -147,8 +147,6 @@ def train(
     results_df = pd.concat(results)
     results_df.to_csv(os.path.join(savedir, f'uhler_{mode}_summary.tsv'),sep='\t')
     print(results_df)
-    #last_model = deepcopy(cmvae)
-    #torch.save(last_model, os.path.join(savedir, 'last_model.pt'))
 
 # loss function definition
 def loss_function(y_hat, y, x_recon, x, mu, var, G, MMD_sigma, kernel_num, matched_IO=False):
