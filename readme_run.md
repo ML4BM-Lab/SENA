@@ -49,14 +49,17 @@ cd /wdir/src/sena_ablation_study
 
 ## interpretability
 
-# regular_orig
-nohup python3 -u regular_ae.py regular_orig interpretability topgo > ./../../logs/ablation_study/ae_regular_orig_1layer_interpretability_topgo.log &
-nohup python3 -u regular_ae.py regular_orig interpretability topgo 2 > ./../../logs/ablation_study/ae_regular_orig_2layer_interpretability_topgo.log &
-
-# regular_reduced
+# regular
+## AE
 nohup python3 -u regular_ae.py regular interpretability topgo > ./../../logs/ablation_study/ae_regular_1layer_interpretability_topgo.log &
+nohup python3 -u regular_ae.py regular interpretability topgo 2 > ./../../logs/ablation_study/ae_regular_2layer_interpretability_topgo.log &
+
+## VAE
+nohup python3 -u variational_ae.py regular interpretability topgo > ./../../logs/ablation_study/vae_regular_1layer_interpretability_topgo.log &
+
 
 # sena
+## AE
 nohup python3 -u regular_ae.py sena_0 interpretability topgo > ./../../logs/ablation_study/ae_sena_0_1layer_interpretability_topgo.log &
 nohup python3 -u regular_ae.py sena_1 interpretability topgo > ./../../logs/ablation_study/ae_sena_1_1layer_interpretability_topgo.log &
 nohup python3 -u regular_ae.py sena_3 interpretability topgo > ./../../logs/ablation_study/ae_sena_3_1layer_interpretability_topgo.log &
@@ -69,6 +72,8 @@ nohup python3 -u regular_ae.py sena_bias_0 interpretability topgo > ./../../logs
 nohup python3 -u regular_ae.py sena_bias_1 interpretability topgo > ./../../logs/ablation_study/ae_sena_bias_1_1layer_interpretability_topgo.log &
 nohup python3 -u regular_ae.py sena_bias_3 interpretability topgo > ./../../logs/ablation_study/ae_sena_bias_3_1layer_interpretability_topgo.log &
 
+## VAE
+
 # l1 
 nohup python3 -u regular_ae.py l1_3 interpretability topgo > ./../../logs/ablation_study/ae_l1_3_1layer_interpretability_topgo.log &
 nohup python3 -u regular_ae.py l1_5 interpretability topgo > ./../../logs/ablation_study/ae_l1_5_1layer_interpretability_topgo.log &
@@ -79,6 +84,8 @@ nohup python3 -u regular_ae.py l1_5 interpretability topgo 2 > ./../../logs/abla
 nohup python3 -u regular_ae.py l1_7 interpretability topgo 2 > ./../../logs/ablation_study/ae_l1_7_2layer_interpretability_topgo.log &
 
 ## efficiency
+
+## AE
 nohup python3 -u regular_ae.py regular_orig efficiency topgo > ./../../logs/ablation_study/ae_regular_orig_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py regular efficiency topgo > ./../../logs/ablation_study/ae_regular_1layer_efficiency_topgo.log &
 
@@ -90,13 +97,17 @@ nohup python3 -u regular_ae.py sena_bias_0 efficiency topgo > ./../../logs/ablat
 nohup python3 -u regular_ae.py sena_bias_1 efficiency topgo > ./../../logs/ablation_study/ae_sena_bias_1_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py sena_bias_3 efficiency topgo > ./../../logs/ablation_study/ae_sena_bias_3_1layer_efficiency_topgo.log &
 
-
 nohup python3 -u regular_ae.py l1_3 efficiency topgo > ./../../logs/ablation_study/ae_l1_3_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py l1_5 efficiency topgo > ./../../logs/ablation_study/ae_l1_5_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py l1_7 efficiency topgo > ./../../logs/ablation_study/ae_l1_7_1layer_efficiency_topgo.log &
 
-# nohup python3 -u regular_ae.py l1_4 efficiency topgo > ./../../logs/ablation_study/ae_l1_4_1layer_efficiency_topgo.log &
-# nohup python3 -u regular_ae.py l1_6 efficiency topgo > ./../../logs/ablation_study/ae_l1_6_1layer_efficiency_topgo.log &
+## VAE
+nohup python3 -u variational_ae.py regular efficiency topgo > ./../../logs/ablation_study/vae_regular_1layer_efficiency_topgo.log &
+nohup python3 -u variational_ae.py sena_0 efficiency topgo > ./../../logs/ablation_study/vae_sena_0_1layer_efficiency_topgo.log &
+nohup python3 -u variational_ae.py sena_1 efficiency topgo > ./../../logs/ablation_study/vae_sena_1_1layer_efficiency_topgo.log &
+nohup python3 -u variational_ae.py sena_3 efficiency topgo > ./../../logs/ablation_study/vae_sena_3_1layer_efficiency_topgo.log &
+
+
 
 
 ## lcorr
