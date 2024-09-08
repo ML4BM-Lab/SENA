@@ -8,6 +8,10 @@ cd /wdir/src/uhler
 # regular architecture
 #✓
 nohup python3 -u run.py --trainmode "regular" --latdim 70 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42.out & 
+nohup python3 -u run.py --trainmode "regular" --latdim 35 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42_latdim35.out & 
+nohup python3 -u run.py --trainmode "regular" --latdim 10 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42_latdim10.out & 
+nohup python3 -u run.py --trainmode "regular" --latdim 5 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42_latdim5.out & 
+
 #✓
 nohup python3 -u run.py --trainmode "regular" --latdim 70 --seed 13 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_13.out &
 #✓
@@ -89,10 +93,6 @@ nohup python3 -u variational_ae.py sena_1 interpretability topgo > ./../../logs/
 nohup python3 -u variational_ae.py sena_delta_1 interpretability topgo 2 > ./../../logs/ablation_study/vae_sena_delta_1_2layer_interpretability_topgo.log &
 
 nohup python3 -u variational_ae.py sena_3 interpretability topgo > ./../../logs/ablation_study/vae_sena_3_1layer_interpretability_topgo.log &
-nohup python3 -u variational_ae.py sena_delta_3 interpretability topgo 2 > ./../../logs/ablation_study/vae_sena_delta_3_2layer_interpretability_topgo.log &
-
-nohup python3 -u variational_ae.py sena_delta_0 interpretability topgo 2 > ./../../logs/ablation_study/vae_sena_delta_0_2layer_interpretability_topgo.log &
-nohup python3 -u variational_ae.py sena_delta_1 interpretability topgo 2 > ./../../logs/ablation_study/vae_sena_delta_1_2layer_interpretability_topgo.log &
 nohup python3 -u variational_ae.py sena_delta_3 interpretability topgo 2 > ./../../logs/ablation_study/vae_sena_delta_3_2layer_interpretability_topgo.log &
 
 # l1

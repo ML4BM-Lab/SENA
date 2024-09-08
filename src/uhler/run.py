@@ -77,7 +77,7 @@ if __name__ == '__main__':
 		os.makedirs(args.savedir)
 
 	#create folder for seed
-	args.savedir = os.path.join(args.savedir, f'seed_{args.seed}')
+	args.savedir = os.path.join(args.savedir, f'seed_{args.seed}_latdim_{args.latdim}')
 	if not os.path.exists(args.savedir):
 		os.makedirs(args.savedir)
 

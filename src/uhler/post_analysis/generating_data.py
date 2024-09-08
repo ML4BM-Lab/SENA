@@ -22,6 +22,7 @@ import utils as ut
 
 ##
 model_name = 'full_go_sena_delta_1'
+latdim = 70
 seed = 7
 device = "cuda:0"
 adata, _, ptb_targets, _, gos, rel_dict = ut.load_norman_2019_dataset(subsample = 'topgo')
@@ -37,7 +38,7 @@ for knockout in ['ctrl'] + ptb_targets:
         idx_dict[knockout] = (adata.obs[adata.obs['guide_ids'] == knockout]).index.values
 
 """get model"""
-savedir = f'./../../result/uhler/{model_name}/seed_{seed}' 
+savedir = f'./../../result/uhler/{model_name}/seed_{seed}_latdim_{latdim}' 
 model = torch.load(f'{savedir}/best_model.pt')
 
 ##
@@ -65,7 +66,7 @@ with torch.no_grad():
         na_score_fc_mean = model.fc_mean(na_score_fc1)
         info_dict['fc_mean'][gene].append(na_score_fc_mean.detach().cpu().numpy())
 
-        na_score_fc_var = model.fc_var(na_score_fc1)
+        na_score_fc_var = torch.nn.Softplus()(model.fc_var(na_score_fc1))
         info_dict['fc_var'][gene].append(na_score_fc_var.detach().cpu().numpy())
 
         """reparametrization trick"""
@@ -132,12 +133,12 @@ for layer in info_dict:
 #add pertb_dict
 results_dict['pert_map'] = pd.DataFrame(pert_dict, index = [0]).T
 results_dict['pert_map'].columns = ['c_enc_mapping']
+results_dict['causal_graph'] = model.G
 
 """add weights layers (delta) for """
 results_dict['mean_delta_matrix'] = pd.DataFrame(model.fc_mean.weight.detach().cpu().numpy().T, index = gos) 
 results_dict['std_delta_matrix'] = pd.DataFrame(model.fc_var.weight.detach().cpu().numpy().T, index = gos) 
 
 """save info"""
-
-with open(f'./../../result/uhler/{model_name}/seed_{seed}/post_analysis_{model_name}_seed_7.pickle' , 'wb') as handle:
-    pickle.dump(results_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open(f'./../../result/uhler/{model_name}/seed_{seed}/post_analysis_{model_name}_seed_7.pickle' , 'wb') as handle:
+#     pickle.dump(results_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
