@@ -14,6 +14,7 @@ import os
 import pickle
 import sys
 import torch.nn.functional as F
+import time
 
 class VAE(nn.Module):
     def __init__(self, input_size, latent_size):
@@ -23,21 +24,21 @@ class VAE(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder
-        self.encoder_mean = nn.Linear(input_size, latent_size)  # Mean for latent space
-        self.encoder_logvar = nn.Linear(input_size, latent_size)  # Log variance for latent space
+        self.encoder= nn.Linear(input_size, latent_size)  # Mean for latent space
+        self.encoder_var = nn.Linear(input_size, latent_size)  # Log variance for latent space
        
         # Decoder
         self.decoder = nn.Linear(latent_size, input_size)
 
     def encode(self, x):
         # Get the mean and log variance from the encoder
-        mean = self.encoder_mean(x)
-        logvar = self.encoder_logvar(x)
-        return mean, logvar
+        mean = self.encoder(x)
+        var = F.softplus(self.encoder_var(x))
+        return mean, var
 
-    def reparameterize(self, mean, logvar):
+    def reparameterize(self, mean, var):
         # Sample from the latent space using the reparameterization trick
-        std = torch.exp(0.5 * logvar)  # Standard deviation
+        std = torch.exp(0.5 * var)  # Standard deviation
         eps = torch.randn_like(std)  # Random normal tensor
         z = mean + eps * std  # Reparameterization trick
         return z
@@ -45,14 +46,56 @@ class VAE(nn.Module):
     def forward(self, x):
 
         # Encoding step: get mean and log variance
-        mean, logvar = self.encode(x)
+        mean, var = self.encode(x)
         
         # Reparameterization step: sample from latent space
-        z = self.reparameterize(mean, logvar)
+        z = self.reparameterize(mean, var)
         
         # Decoding step: reconstruct the input
         reconstructed_x = self.decoder(z)
-        return reconstructed_x, mean, logvar
+        return reconstructed_x, mean, var
+
+class VAE2Layers(nn.Module):
+    def __init__(self, input_size, latent_size):
+        super(VAE2Layers, self).__init__()
+
+        # Activation Functions
+        self.lrelu = nn.LeakyReLU()
+
+        # Encoder
+        self.encoder = nn.Linear(input_size, latent_size)
+        self.encoder_mean = nn.Linear(latent_size, latent_size)  # Mean for latent space
+        self.encoder_var = nn.Linear(latent_size, latent_size)  # Log variance for latent space
+       
+        # Decoder
+        self.decoder = nn.Linear(latent_size, input_size)
+
+    def encode(self, x):
+        # Get the mean and log variance from the encoder
+        x = self.encoder(x)
+        x = self.lrelu(x)
+        mean = self.encoder_mean(x)
+        var = F.softplus(self.encoder_var(x))
+        return mean, var
+
+    def reparameterize(self, mean, var):
+        # Sample from the latent space using the reparameterization trick
+        std = torch.exp(0.5 * var)  # Standard deviation
+        eps = torch.randn_like(std)  # Random normal tensor
+        z = mean + eps * std  # Reparameterization trick
+        return z
+
+    def forward(self, x):
+
+        # Encoding step: get mean and log variance
+        mean, var = self.encode(x)
+        
+        # Reparameterization step: sample from latent space
+        z = self.reparameterize(mean, var)
+        
+        # Decoding step: reconstruct the input
+        reconstructed_x = self.decoder(z)
+        return reconstructed_x, mean, var
 
 class SENAVAE(nn.Module):
     def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
@@ -62,21 +105,21 @@ class SENAVAE(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder 
-        self.encoder_mean = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)  # Mean for latent space
-        self.encoder_logvar = nn.Linear(input_size, latent_size)  # Log variance for latent space
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)  # Mean for latent space
+        self.encoder_var = nn.Linear(input_size, latent_size)  # Log variance for latent space
        
         # Decoder
         self.decoder = nn.Linear(latent_size, input_size)
 
     def encode(self, x):
         # Get the mean and log variance from the encoder
-        mean = self.encoder_mean(x)
-        logvar = self.encoder_logvar(x)
-        return mean, logvar
+        mean = self.encoder(x)
+        var = F.softplus(self.encoder_var(x))
+        return mean, var
 
-    def reparameterize(self, mean, logvar):
+    def reparameterize(self, mean, var):
         # Sample from the latent space using the reparameterization trick
-        std = torch.exp(0.5 * logvar)  # Standard deviation
+        std = torch.exp(0.5 * var)  # Standard deviation
         eps = torch.randn_like(std)  # Random normal tensor
         z = mean + eps * std  # Reparameterization trick
         return z
@@ -84,41 +127,86 @@ class SENAVAE(nn.Module):
     def forward(self, x):
 
         # Encoding step: get mean and log variance
-        mean, logvar = self.encode(x)
+        mean, var = self.encode(x)
         
         # Reparameterization step: sample from latent space
-        z = self.reparameterize(mean, logvar)
+        z = self.reparameterize(mean, var)
         
         # Decoding step: reconstruct the input
         reconstructed_x = self.decoder(z)
-        return reconstructed_x, mean, logvar 
+        return reconstructed_x, mean, var 
+
+class SENADeltaVAE(nn.Module):
+    def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
+        super(SENADeltaVAE, self).__init__()
+
+        # Activation Functions
+        self.lrelu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
+
+        # Encoder 
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
+        self.encoder_mean = nn.Linear(latent_size, latent_size)  # Mean for latent space
+        self.encoder_var = nn.Linear(latent_size, latent_size)  # Log variance for latent space
+       
+        # Decoder
+        self.decoder = nn.Linear(latent_size, input_size)
+
+    def encode(self, x):
+        # Get the mean and log variance from the encoder
+        x = self.encoder(x)
+        x = self.lrelu(x)
+        mean = self.encoder_mean(x)
+        var = F.softplus(self.encoder_var(x))
+        return mean, var
+
+    def reparameterize(self, mean, var):
+        # Sample from the latent space using the reparameterization trick
+        std = torch.exp(0.5 * var)  # Standard deviation
+        eps = torch.randn_like(std)  # Random normal tensor
+        z = mean + eps * std  # Reparameterization trick
+        return z
+
+    def forward(self, x):
+
+        # Encoding step: get mean and log variance
+        mean, var = self.encode(x)
+        
+        # Reparameterization step: sample from latent space
+        z = self.reparameterize(mean, var)
+        
+        # Decoding step: reconstruct the input
+        reconstructed_x = self.decoder(z)
+        return reconstructed_x, mean, var 
 
 def run_model(mode, seed, analysis = 'interpretability'):
 
-    def vae_loss(reconstructed_x, x, mean, logvar, beta=1):
+    def vae_loss(reconstructed_x, x, mean, var, beta=1, epsilon=1e-10):
         # Reconstruction loss (MSE or Binary Cross-Entropy)
         reconstruction_loss = F.mse_loss(reconstructed_x, x, reduction='mean')
         
-        # Kullback-Leibler divergence
-        kl_divergence = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
+        logvar = torch.log(var)
+        kl_divergence = torch.sum(mean.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)).mul_(-0.5)/x.shape[0]
 
         # Total VAE loss
         return reconstruction_loss, beta*kl_divergence
+
+    ##measure time
+    starttime = time.time()
 
     if mode == 'regular':
 
         if nlayers == 1:
             model = VAE(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
         else:
-            pass
-            #model = VAE2Layers(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
+            model = VAE2Layers(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
 
     elif mode[:4] == 'sena':
 
         if 'delta' in mode:
             sp_num = float(mode.split('_')[2])
             sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
-            #model = SENADeltaVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
+            model = SENADeltaVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
         else:
             sp_num = float(mode.split('_')[1])
@@ -130,8 +218,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
         if nlayers == 1:
             model = VAE(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
         else:
-            pass
-            #model = VAE2Layers(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
+            model = VAE2Layers(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
 
         """l1 reg"""
         l1_lambda_num = float(mode.split('_')[1])
@@ -144,8 +231,8 @@ def run_model(mode, seed, analysis = 'interpretability'):
     results = []
     
     # Training Loop
-    epochs = 250 #if analysis == 'efficiency' else 50
-    report_epoch = 2 if analysis == 'efficiency' else 5
+    epochs = 250 if analysis == 'efficiency' else 250
+    report_epoch = 2 if analysis == 'efficiency' else 10
 
     """train"""
     for epoch in range(epochs):
@@ -179,6 +266,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
                 ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
                 summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
                 summary_analysis_ep['epoch'] = epoch
+                print(summary_analysis_ep['recall_at_100'].values[0])
 
             elif analysis == 'efficiency':
                 
@@ -191,12 +279,13 @@ def run_model(mode, seed, analysis = 'interpretability'):
                 #compute sparsity
                 sparsity = 0
                 # sparsity = st.compute_sparsity_contribution(model, test_data.cuda(), mode=mode, sparsity_th = 1e-5)
-
                 summary_analysis_ep = pd.DataFrame({'epoch': epoch, 'train_mse': np.mean(epoch_train_mse),
                                                     'test_mse': test_mse.__float__(), 'train_KL': np.mean(epoch_train_kl),
                                                     'test_KL': test_KL.__float__(),
                                                     'mode': mode, 'sparsity':sparsity}, index = [0])
 
+                print(f'Epoch {epoch+1}, TEST MSE Loss: {test_mse.__float__()}, TEST KL Loss: {test_KL.__float__()}')
+    
             # elif analysis == 'lcorr':
 
             #     ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
@@ -210,6 +299,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
     #add seed
     results_df = pd.concat(results)
     results_df['seed'] = seed
+    results_df['time'] = time.time() - starttime
 
     return results_df
 
@@ -222,7 +312,7 @@ if __name__ == '__main__':
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
     
     #define seeds
-    nseeds = 3 if analysis == 'efficiency' else 5
+    nseeds = 2 if analysis == 'efficiency' else 3
 
     #init 
     fpath = os.path.join('./../../result/ablation_study',f'vae_{modeltype}')

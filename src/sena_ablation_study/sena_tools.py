@@ -135,26 +135,22 @@ def compute_layer_weight_contribution(model, adata, knockout, ens_knockout, num_
 
     #get knockout id
     genes = adata.var_names.values
-    if ens_knockout in genes:
-        idx = np.where(genes == ens_knockout)[0][0]
-    else: 
-        idx = 0
-    
-    #get layer matrix
-    W = model.encoder.weight[:,idx].detach().cpu().numpy()
+    idx = np.where(genes == ens_knockout)[0][0]
 
-    if mode[:7] == 'regular' or mode[:2] == 'l1':
-        bias = model.encoder.bias.detach().cpu().numpy()
-    elif mode[:4] == 'sena':
-        bias = 0
+    #get layer matrix
+    if mode[:4] == 'sena':
+        W = (model.encoder.weight * model.encoder.mask.T)[:,idx].detach().cpu().numpy()
+    else:
+        W = model.encoder.weight[:,idx].detach().cpu().numpy()
+    # bias = model.encoder.bias.detach().cpu().numpy()
 
     #get contribution to knockout gene from ctrl to each of the activation (gene input * weight)
     ctrl_exp_mean = adata[adata.obs['guide_ids'] == ''].X[:,idx].todense().mean()
     knockout_exp_mean = adata[adata.obs['guide_ids'] == knockout].X[:,idx].todense().mean()
 
     #compute contribution
-    ctrl_contribution = W * ctrl_exp_mean + bias
-    knockout_contribution = W * knockout_exp_mean + bias
+    ctrl_contribution = W * ctrl_exp_mean # + bias
+    knockout_contribution = W * knockout_exp_mean # + bias
 
     #now compute difference of means
     diff_vector = np.abs(ctrl_contribution - knockout_contribution)
@@ -166,7 +162,7 @@ def compute_layer_weight_contribution(model, adata, knockout, ens_knockout, num_
 
     return list(top_idxs[:num_affected])
 
-def compute_activation_df(model, adata, gos, scoretype = 'ttest', mode = 'sena'):
+def compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = 'sena'):
 
     #build ac
     na_activity_score = build_activity_score_df(model, adata)
@@ -187,41 +183,43 @@ def compute_activation_df(model, adata, gos, scoretype = 'ttest', mode = 'sena')
 
     ## init df
     ttest_df = []
+    genes = adata.var_names.values
 
     for knockout in na_activity_score.keys():
         
-        if knockout != 'ctrl':
+        if knockout == 'ctrl':
+            continue
+        
+        ens_knockout = ensembl_genename_dict[knockout]
+        if (ens_knockout not in genes):
+            continue
 
-            #get knockout cells
-            knockout_cells = na_activity_score[knockout]
+        #get knockout cells        
+        knockout_cells = na_activity_score[knockout]
 
-            #compute affected genesets
-            belonging_genesets = [geneset for geneset in gos if geneset in gene_go_dict[ensembl_genename_dict[knockout]]]
-            if mode[:7] == 'regular' or mode[:2] == 'l1':
-                belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ensembl_genename_dict[knockout], len(belonging_genesets)) 
+        #compute affected genesets
+        if '0' in mode:
+            affected_genesets = [geneset for geneset in gos if geneset in gene_go_dict[ensembl_genename_dict[knockout]]]
+            belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, len(affected_genesets), mode=mode)
+            assert all(np.array(sorted([np.where(np.array(gos) == x)[0][0] for x in affected_genesets])) == np.array(sorted(belonging_genesets)))
+        else:
+            belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, 100, mode=mode) 
 
-            #generate diff vector
-            if scoretype == 'knockout_contr':
-                diff_vector = compute_layer_weight_contribution(model, adata, knockout, ensembl_genename_dict[knockout], len(belonging_genesets), only_exp=True)    
+        for i, geneset in enumerate(gos):
+            
+            #perform ttest
+            if scoretype == 'ttest':
+                _, p_value = ttest_ind(ctrl_cells[:,i], knockout_cells[:,i], equal_var=False)
+                score = -1 * m.log10(p_value)
 
-            for i, geneset in enumerate(gos):
-                
-                #perform ttest
-                if scoretype == 'ttest':
-                    _, p_value = ttest_ind(ctrl_cells[:,i], knockout_cells[:,i], equal_var=False)
-                    score = -1 * m.log10(p_value)
+            elif scoretype == 'mu_diff':
+                score = abs(ctrl_cells[:,i].mean() - knockout_cells[:,i].mean())
 
-                elif scoretype == 'mu_diff':
-                    score = abs(ctrl_cells[:,i].mean() - knockout_cells[:,i].mean())
-
-                elif scoretype == 'knockout_contr':
-                    score = diff_vector[i]
-                    
-                #append info
-                if mode[:4] == 'sena':
-                    ttest_df.append([knockout, geneset, scoretype, score, geneset in belonging_genesets])
-                elif mode[:7] == 'regular' or mode[:2] == 'l1':
-                    ttest_df.append([knockout, i, scoretype, score, i in belonging_genesets])
+            #append info
+            if mode[:4] == 'sena':
+                ttest_df.append([knockout, geneset, scoretype, score, i in belonging_genesets])
+            elif mode[:7] == 'regular' or mode[:2] == 'l1':
+                ttest_df.append([knockout, i, scoretype, score, i in belonging_genesets])
 
     ttest_df = pd.DataFrame(ttest_df)
     ttest_df.columns = ['knockout', 'geneset', 'scoretype', 'score', 'affected']
@@ -249,7 +247,7 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
         
         if knockout not in ptb_targets_direct:
             continue
-
+        
         knockout_distr = ttest_df[ttest_df['knockout'] == knockout]
 
         """first test - zdiff distribution differences"""
@@ -278,6 +276,8 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
                                'recall_at_25': outlier_activation_df['recall_at_25'].mean()}
 
     return pd.DataFrame(outlier_activation_dict, index = [0])
+
+"""latent correlation and sparsity"""
 
 def compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df):
 
@@ -460,7 +460,7 @@ def plot_weight_distribution(model, epoch, mode):
 """NA LAYER"""
 class NetActivity_layer(torch.nn.Module):
 
-    def __init__(self, input_genes, output_gs, relation_dict, bias = False, device = None, dtype = None, sp = 0):
+    def __init__(self, input_genes, output_gs, relation_dict, bias = True, device = None, dtype = None, sp = 0):
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.input_genes = input_genes

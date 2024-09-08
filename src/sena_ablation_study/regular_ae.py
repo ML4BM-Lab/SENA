@@ -84,7 +84,7 @@ class SENABias(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder
-        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp, bias=True)
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
        
         # Decoder
         self.decoder = nn.Linear(latent_size, input_size)
