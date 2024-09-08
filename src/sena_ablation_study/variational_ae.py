@@ -24,7 +24,7 @@ class VAE(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder
-        self.encoder= nn.Linear(input_size, latent_size)  # Mean for latent space
+        self.encoder = nn.Linear(input_size, latent_size)  # Mean for latent space
         self.encoder_var = nn.Linear(input_size, latent_size)  # Log variance for latent space
        
         # Decoder
