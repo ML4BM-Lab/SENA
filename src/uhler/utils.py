@@ -317,6 +317,7 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         )
 
         return dataloader, dataloader2, dim, cdim, ptb_genes
+    
     else:
 
         dataloader = DataLoader(
@@ -330,13 +331,10 @@ def get_data(batch_size=32, mode='train', perturb_targets=None):
         dim = dataset[0][0].shape[0]
         cdim = dataset[0][2].shape[0]
 
-        return dataset.adata, dataloader, dim, cdim, ptb_genes
+        return dataloader, dim, cdim, ptb_genes
 
 """ data sampler"""
 
-# read the norman dataset.
-# map the target genes of each cell to a binary vector, using a target gene list "perturb_targets".
-# "perturb_type" specifies whether the returned object contains single trarget-gene samples, double target-gene samples, or both.
 class SCDataset(Dataset):
     def __init__(self, datafile='./../../data/Norman2019_raw.h5ad', perturb_type='single', perturb_targets=None):
         super(Dataset, self).__init__()
@@ -361,7 +359,7 @@ class SCDataset(Dataset):
             
         elif perturb_type == 'double':
 
-            ptb_adata = double_adata[(adata.obs['guide_ids'].str.contains(',')) & (adata.obs['guide_ids']!='')].copy()
+            ptb_adata = double_adata[(double_adata.obs['guide_ids'].str.contains(',')) & (double_adata.obs['guide_ids']!='')].copy()
 
             #keep only cells containing our perturbed genes
             ptb_adata = ptb_adata[ptb_adata.obs['guide_ids'].apply(lambda x: all([y in ptb_targets for y in x.split(',')])), :]

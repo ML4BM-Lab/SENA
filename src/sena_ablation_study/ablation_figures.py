@@ -368,12 +368,11 @@ def _call_vae():
     """single layer"""
     #compare sena vs regular
     methods = ['regular', 'sena_0','sena_1','sena_3', 'l1_3','l1_5','l1_7']
+    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
+    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
 
     #plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo', structure='vae')
     #plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
-
-    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
-    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
 
     """two layers layer"""
     methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']

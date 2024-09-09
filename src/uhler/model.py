@@ -58,7 +58,6 @@ class NetActivity_layer(torch.nn.Module):
 #  "z_dim" specifies the dimension of the latent space.
 class CMVAE(nn.Module):
     def __init__(self, dim, z_dim, c_dim, device=None, mode = 'regular', gos=None, rel_dict=None):
-
         super(CMVAE, self).__init__()
 
         if device is None:

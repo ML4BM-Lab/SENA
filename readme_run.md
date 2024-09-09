@@ -28,6 +28,11 @@ nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 7 --epochs
 # sena delta lambda = 0.1
 #✓
 nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 70 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1_seed_42.out &
+nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 35 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1_seed_42.out &
+nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 10 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1_seed_42.out &
+nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 5 --seed 42 > ./../../logs/uhler/full_go_sena_delta_1_seed_42.out &
+
+
 #✓
 nohup python3 -u run.py --trainmode "sena_delta_1" --latdim 70 --seed 13 > ./../../logs/uhler/full_go_sena_delta_1_seed_13.out &
 #✓
