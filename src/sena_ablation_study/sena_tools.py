@@ -23,37 +23,39 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from random import sample
 import math as m
+from collections import Counter
 
 """dataset"""
-def load_norman_2019_dataset(subsample):
+def load_norman_2019_dataset():
 
-    def load_gene_go_assignments(subsample):
+    def load_gene_go_assignments():
 
         #filter genes that are not in any GO
         GO_to_ensembl_id_assignment = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
         GO_to_ensembl_id_assignment.columns = ['GO_id', 'ensembl_id']
-        
-        #apply subsampling
-        if subsample == 'raw':
-            gos = sorted(set(GO_to_ensembl_id_assignment['GO_id'].values))
 
-        elif 'topgo' in subsample:
+        #reduce the gos to the genes we have in adata
+        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['ensembl_id'].isin(adata.var_names)]
 
-            if 'topgo_' in subsample:
+        #define gos and filter
+        gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
+        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(gos)]
 
-                subsample_ratio = int(subsample.split('_')[1])/100
-                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
+        #keep only genesets when containing more than 5 genes
+        counter_genesets_df = pd.DataFrame(Counter(GO_to_ensembl_id_assignment['GO_id']),index=[0]).T
+        genesets_in = counter_genesets_df[counter_genesets_df.values >= 5].index
+        GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(genesets_in)]
 
-                #select those gos that are not affected by perturbations
-                gos = sample(gos, len(gos) * subsample_ratio)
+        #redefine gos
+        gos = sorted(GO_to_ensembl_id_assignment['GO_id'].unique())
 
-            else:
-                gos = sorted(set(pd.read_csv(os.path.join('..','..','data','topGO_Jesus.tsv'),sep='\t')['PathwayID'].values.tolist()))
+        #generate dict
+        gene_go_dict = defaultdict(list)
 
-            #now filter by go
-            GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(gos)]
+        for go,ens in GO_to_ensembl_id_assignment.values:
+            gene_go_dict[ens].append(go)
 
-        return gos, GO_to_ensembl_id_assignment
+        return gos, GO_to_ensembl_id_assignment, gene_go_dict
 
     def compute_affecting_perturbations(GO_to_ensembl_id_assignment):
 
@@ -62,12 +64,12 @@ def load_norman_2019_dataset(subsample):
         ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
         ensembl_genename_mapping_rev = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
 
-        ##
+        ##get intervention targets
         intervention_genenames = map(lambda x: ensembl_genename_mapping_dict.get(x,None), GO_to_ensembl_id_assignment['ensembl_id'])
         ptb_targets = list(set(intervention_genenames).intersection(set([x for x in adata.obs['guide_ids'] if x != '' and ',' not in x])))
         ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_rev[x], ptb_targets))
 
-        return ptb_targets, ptb_targets_ens
+        return ptb_targets, ptb_targets_ens, ensembl_genename_mapping_rev
 
     def build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment):
 
@@ -89,39 +91,24 @@ def load_norman_2019_dataset(subsample):
     """keep only single interventions"""
     adata = sc.read_h5ad(fpath)
     adata = adata[(~adata.obs['guide_ids'].str.contains(','))]
-    
-    #drop genes that are not in any GO
-    gos, GO_to_ensembl_id_assignment = load_gene_go_assignments(subsample)
-    adata = adata[:, adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
 
-    #compute perturbations with at least 1 gene set
-    ptb_targets, ptb_targets_ens = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
+    #build genesets
+    gos, GO_to_ensembl_id_assignment, gene_go_dict = load_gene_go_assignments()
+
+    #compute perturbations with at least 1 gene set for interpretability metrics
+    ptb_targets, ptb_targets_ens, ensembl_genename_mapping_rev = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
 
     #build gene-go rel
     rel_dict = build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment)
     
-    #keep only perturbations affecting at least one gene set
-    adata = adata[adata.obs['guide_ids'].isin(ptb_targets+[''])]
-
-    #(adata.var_names.isin(ptb_targets_ens)).sum()
-
-    return adata, ptb_targets, ptb_targets_ens, gos, rel_dict
+    return adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ensembl_genename_mapping_rev
 
 """tools"""
-def retrieve_direct_genes(adata, ptb_targets):
-    ensembl_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
-    ensembl_genename_mapping_dict = dict(zip(ensembl_genename_mapping.iloc[:,1], ensembl_genename_mapping.iloc[:,0]))
-    ensembl_genename_mapping_revdict = dict(zip(ensembl_genename_mapping.iloc[:,0], ensembl_genename_mapping.iloc[:,1]))
-    ptb_targets_ens = list(map(lambda x: ensembl_genename_mapping_dict[x], ptb_targets))
-    ptb_targets_direct = [ensembl_genename_mapping_revdict[x] for x in ptb_targets_ens if x in adata.var_names]
-    return ptb_targets_direct
 
-def build_activity_score_df(model, adata):
+def build_activity_score_df(model, adata, ptb_targets):
 
     na_activity_score = {}
-    intervention_types = list(adata.obs['guide_ids'].values.unique())
-
-    for int_type in intervention_types:
+    for int_type in ptb_targets+['']: #+control
         
         obs = adata[adata.obs['guide_ids'] == int_type].X.todense()
         int_df = pd.DataFrame(model.encoder(torch.tensor(obs).float().to('cuda')).detach().cpu().numpy())
@@ -162,46 +149,29 @@ def compute_layer_weight_contribution(model, adata, knockout, ens_knockout, num_
 
     return list(top_idxs[:num_affected])
 
-def compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = 'sena'):
+def compute_activation_df(model, adata, gos, scoretype, mode, gene_go_dict, ensembl_genename_dict, ptb_targets):
 
     #build ac
-    na_activity_score = build_activity_score_df(model, adata)
-
-    ## load genesets-genes mapping
-    db_gene_go_map = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','go_kegg_gene_map.tsv'),sep='\t')
-    gene_go_dict = defaultdict(list)
-
-    for go,ens in db_gene_go_map.values:
-        gene_go_dict[ens].append(go)
-
-    ##build geneset mapping
-    ensemble_genename_mapping = pd.read_csv(os.path.join('..','..','data','delta_selected_pathways','ensembl_genename_mapping.tsv'),sep='\t')
-    ensembl_genename_dict = dict(zip(ensemble_genename_mapping.iloc[:,1], ensemble_genename_mapping.iloc[:,0]))
+    na_activity_score = build_activity_score_df(model, adata, ptb_targets)
 
     ## define control cells
     ctrl_cells = na_activity_score['ctrl']
 
     ## init df
     ttest_df = []
-    genes = adata.var_names.values
 
     for knockout in na_activity_score.keys():
         
         if knockout == 'ctrl':
             continue
         
+        #get knockout cells       
         ens_knockout = ensembl_genename_dict[knockout]
-        if (ens_knockout not in genes):
-            continue
-
-        #get knockout cells        
         knockout_cells = na_activity_score[knockout]
 
         #compute affected genesets
         if mode[:4] == 'sena':
             belonging_genesets = [geneset for geneset in gos if geneset in gene_go_dict[ensembl_genename_dict[knockout]]]
-            #belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, len(affected_genesets), mode=mode)
-            #assert all(np.array(sorted([np.where(np.array(gos) == x)[0][0] for x in affected_genesets])) == np.array(sorted(belonging_genesets)))
         else:
             belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, 100, mode=mode) 
 
@@ -217,7 +187,7 @@ def compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = 'sena
 
             #append info
             if mode[:4] == 'sena':
-                ttest_df.append([knockout, geneset, scoretype, score, i in belonging_genesets])
+                ttest_df.append([knockout, geneset, scoretype, score, geneset in belonging_genesets])
             elif mode[:7] == 'regular' or mode[:2] == 'l1':
                 ttest_df.append([knockout, i, scoretype, score, i in belonging_genesets])
 
@@ -231,7 +201,7 @@ def compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = 'sena
 
     return ttest_df
 
-def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'sena'):
+def compute_outlier_activation_analysis(ttest_df, mode = 'sena'):
 
     ## correct pvalues
     if ttest_df['scoretype'].iloc[0] == 'ttest':
@@ -239,15 +209,10 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
         ttest_df['score'] = ttest_df['score'].replace({0: 1e-200})
         ttest_df['score'] = ttest_df['score'] * ttest_df.shape[0] #bonferroni correction
 
-    ptb_targets_direct = retrieve_direct_genes(adata, ptb_targets)
-    
     ## compute metric for each knockout
     outlier_activation = []
     for knockout in ttest_df['knockout'].unique():
-        
-        if knockout not in ptb_targets_direct:
-            continue
-        
+  
         knockout_distr = ttest_df[ttest_df['knockout'] == knockout]
 
         """first test - zdiff distribution differences"""
@@ -278,7 +243,6 @@ def compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = 'se
     return pd.DataFrame(outlier_activation_dict, index = [0])
 
 """latent correlation and sparsity"""
-
 def compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df):
 
     #build ac

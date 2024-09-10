@@ -99,7 +99,7 @@ class SENADelta(nn.Module):
         x = self.decoder(x)
         return x
 
-def run_model(mode, seed, analysis = 'interpretability'):
+def run_model(mode, seed, analysis, gene_go_dict, ens_gene_dict):
 
     ##measure time
     starttime = time.time()
@@ -166,8 +166,9 @@ def run_model(mode, seed, analysis = 'interpretability'):
         if not epoch%report_epoch:
 
             if analysis == 'interpretability':
-                ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
-                summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
+                ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode, 
+                                                    gene_go_dict=gene_go_dict, ensembl_genename_dict=ens_gene_dict, ptb_targets=ptb_targets)
+                summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, mode = mode)
                 summary_analysis_ep['epoch'] = epoch
 
             elif analysis == 'efficiency':
@@ -198,7 +199,7 @@ if __name__ == '__main__':
     ##define inputs
     modeltype = sys.argv[1]
     analysis = sys.argv[2]
-    subsample = sys.argv[3]
+    dataset = sys.argv[3]
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
     
     #define seeds
@@ -206,7 +207,7 @@ if __name__ == '__main__':
 
     #init 
     fpath = os.path.join('./../../result/ablation_study',f'ae_{modeltype}')
-    fname = os.path.join(fpath,f'autoencoder_{modeltype}_ablation_{analysis}_{nlayers}layer_{subsample}')
+    fname = os.path.join(fpath,f'autoencoder_{modeltype}_ablation_{analysis}_{nlayers}layer_{dataset}')
     results_dict = {}
 
     #if folder does not exist, create it
@@ -218,16 +219,16 @@ if __name__ == '__main__':
     for i in range(nseeds):
 
         # Load data
-        adata, ptb_targets, ptb_targets_ens, gos, rel_dict = st.load_norman_2019_dataset(subsample=subsample)
+        if dataset == 'norman':
+            adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ens_gene_dict = st.load_norman_2019_dataset()
 
         #split train/test
         dataset = torch.tensor(adata.X.todense()).float()
         train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.1)
-
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
         #run the model
-        results.append(run_model(mode = modeltype, seed = i, analysis = analysis))
+        results.append(run_model(mode = modeltype, seed = i, analysis = analysis, gene_go_dict=gene_go_dict, ens_gene_dict=ens_gene_dict))
         
     ##build the dataframe and save
     if analysis != 'lcorr':
