@@ -174,10 +174,11 @@ def run_model(mode, seed, analysis, gene_go_dict, ens_gene_dict):
             elif analysis == 'efficiency':
                 
                 test_mse = torch.nn.functional.mse_loss(model(test_data.cuda()).detach().cpu(), test_data).__float__()
-                sparsity = st.compute_sparsity_contribution(model, test_data.cuda(), mode=mode, sparsity_th = 1e-5)
+                sparsity = st.compute_sparsity_contribution(model, test_data.cuda(), mode=mode, sparsity_th = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4])
                 summary_analysis_ep = pd.DataFrame({'epoch': epoch, 'train_mse': np.mean(epoch_train_mse),
-                                                    'test_mse': test_mse, 'mode': mode, 'sparsity':sparsity}, index = [0])
+                                                    'test_mse': test_mse, 'mode': mode}|sparsity, index = [0])
 
+                print(summary_analysis_ep)
             elif analysis == 'lcorr':
                 ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
                 summary_analysis_ep = st.compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df)

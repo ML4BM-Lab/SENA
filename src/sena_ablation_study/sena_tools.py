@@ -290,7 +290,7 @@ def compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df
 
     return lcorr_df
 
-def compute_sparsity_contribution(model, dataset, mode, sparsity_th = 1e-3):
+def compute_sparsity_contribution(model, dataset, mode, sparsity_th = [1e-6]):
 
     contributions = []
 
@@ -308,9 +308,12 @@ def compute_sparsity_contribution(model, dataset, mode, sparsity_th = 1e-3):
             contributions.append((dmean[i] * layer_weights[i,:]).detach().cpu().numpy())
 
     contr_mat = np.vstack(contributions)
-    sparsity = (np.abs(contr_mat) <= sparsity_th).sum() / (contr_mat.shape[0]*contr_mat.shape[1])
+    sp_dict = {}
+    for sth in sparsity_th:
+        sparsity = (np.abs(contr_mat) <= sth).sum() / (contr_mat.shape[0]*contr_mat.shape[1])
+        sp_dict[f'sparsity_{sth}'] = sparsity
 
-    return sparsity
+    return sp_dict
 
 """plot"""
 def plot_score_distribution(ttest_df, epoch, mode, affected=True):

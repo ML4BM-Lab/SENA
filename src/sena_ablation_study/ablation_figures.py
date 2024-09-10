@@ -14,7 +14,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
 
-def plot_mse_analysis(mode = '1layer', methods = [], subsample = 'topgo', structure='ae', metric='test_mse', plot_type = 'std'):
+def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structure='ae', metric='test_mse', plot_type = 'std'):
 
     def build_dataset():
 
@@ -25,7 +25,7 @@ def plot_mse_analysis(mode = '1layer', methods = [], subsample = 'topgo', struct
         arch_l = []
         for arch in methods:
             
-            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_efficiency_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_mse[variables])
         
         df = pd.concat(arch_l)
@@ -100,14 +100,14 @@ def plot_mse_analysis(mode = '1layer', methods = [], subsample = 'topgo', struct
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_{metric}_{subsample}.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_{metric}_{dataset}.pdf'))
 
     # Clear the plot
     plt.cla()
     plt.clf()
     plt.close()
 
-def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo', structure='ae'):
+def plot_sparsity_analysis(mode = '1layer', methods = [], dataset = 'norman', structure='ae'):
 
     def build_dataset():
 
@@ -118,7 +118,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo', s
         arch_l = []
         for arch in methods:
             
-            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_efficiency_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_efficiency_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_test_mse[variables])
         
         df = pd.concat(arch_l)
@@ -172,7 +172,7 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo', s
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_sparsity_{subsample}.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_sparsity_{dataset}.pdf'))
 
     # Clear the plot
     plt.cla()
@@ -204,14 +204,14 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], subsample = 'topgo', s
     plt.ylabel('Mean Sparsity', fontsize=14)
     plt.title(f'Sparsity by Mode at Epoch {df["epoch"].max()+1}', fontsize=16)
 
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_1layer_sparsity_{subsample}_last_epoch.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_1layer_sparsity_{dataset}_last_epoch.pdf'))
 
     # Clear the plot
     plt.cla()
     plt.clf()
     plt.close()
 
-def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', methods = [], name = '', metric = 'z_diff', structure='ae'):
+def plot_outlier_analysis(mode = '1layer', dataset = 'norman', methods = [], name = '', metric = 'z_diff', structure='ae'):
 
     def build_dataset():
 
@@ -219,7 +219,7 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', methods = [], na
         arch_l = []
         for arch in methods:
             
-            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_test_mse)
         
         df = pd.concat(arch_l)
@@ -270,15 +270,15 @@ def plot_outlier_analysis(mode = '1layer', subsample = 'topgo', methods = [], na
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{name}_ablation_{mode}_{metric}_{subsample}.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{name}_ablation_{mode}_{metric}_{dataset}.pdf'))
     plt.cla()
     plt.clf()
     plt.close()
 
-def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo', epoch = 5, structure='ae'):
+def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman', epoch = 5, structure='ae'):
 
     ## load data
-    with open(os.path.join('./../../result/ablation_study',f'{structure}_{modeltype}',f'{"autoencoder" if structure=="ae" else "vae"}_{modeltype}_ablation_{analysis}_{mode}_{subsample}.pickle'), 'rb') as handle:
+    with open(os.path.join('./../../result/ablation_study',f'{structure}_{modeltype}',f'{"autoencoder" if structure=="ae" else "vae"}_{modeltype}_ablation_{analysis}_{mode}_{dataset}.pickle'), 'rb') as handle:
         results = pickle.load(handle)
 
     #subset
@@ -303,12 +303,12 @@ def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'se
     plt.grid(True, linestyle='--', alpha=0.6)
 
     # Show the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{modeltype}_ablation_{mode}_{analysis}_{epoch}_{subsample}.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{modeltype}_ablation_{mode}_{analysis}_{epoch}_{dataset}.pdf'))
     plt.cla()
     plt.clf()
     plt.close()
 
-def compute_recall_metrics(mode = '1layer', methods = [], subsample = 'topgo', metric = 'recall_at_25', structure='ae'):
+def compute_recall_metrics(mode = '1layer', methods = [], dataset = 'norman', metric = 'recall_at_25', structure='ae'):
 
     def build_dataset():
 
@@ -316,7 +316,7 @@ def compute_recall_metrics(mode = '1layer', methods = [], subsample = 'topgo', m
         arch_l = []
         for arch in methods:
             
-            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{subsample}.tsv'), sep='\t', index_col=0)
+            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_test_mse)
         
         df = pd.concat(arch_l)
@@ -338,58 +338,58 @@ def _call_ae():
 
     """1layer""" #compare sena vs regular
     
-    methods = ['sena_0', 'sena_1', 'sena_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
-    plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
+    methods = ['sena_0', 'sena_1', 'sena_2', 'regular', 'l1_3', 'l1_5']
+    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
+    plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
 
-    methods = ['sena_0', 'sena_1', 'sena_3']
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo')
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
+    methods = ['sena_0', 'sena_1', 'sena_2', 'sena_0.3', 'sena_0.01']
+    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman')
+    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = 'norman')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
 
 
     """2layer""" #sena-delta
     
     methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
-    #plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
+    #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
+    #plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
 
     methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3']
-    plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
-    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
+    #plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', dataset = 'norman')
+    #plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', dataset = 'norman')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
 
     #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
-    #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
+    #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman')
 
 def _call_vae():
 
     """single layer"""
     #compare sena vs regular
     methods = ['regular', 'sena_0','sena_1','sena_3', 'l1_3','l1_5','l1_7']
-    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
-    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
+    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
+    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
 
     methods = ['sena_0','sena_1','sena_3']
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', structure='vae')
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
 
     """two layers layer"""
     methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']
-    plot_mse_analysis(mode = '2layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
-    plot_mse_analysis(mode = '2layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', , structure='vae')
+    plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
+    plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', , structure='vae')
 
     methods = ['sena_delta_0','sena_delta_1','sena_delta_3']
-    plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', structure='vae')
-    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
+    plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
+    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
 
     
 
 if __name__ == '__main__':
     
-    #_call_ae()
-    _call_vae()
+    _call_ae()
+    #_call_vae()
