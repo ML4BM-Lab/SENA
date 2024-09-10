@@ -18,6 +18,7 @@ nohup python3 -u regular_ae.py regular efficiency norman 2 > ./../../logs/ablati
 nohup python3 -u regular_ae.py sena_0 efficiency norman > ./../../logs/ablation_study/ae_sena_0_1layer_efficiency_norman.log &
 nohup python3 -u regular_ae.py sena_1 efficiency norman > ./../../logs/ablation_study/ae_sena_1_1layer_efficiency_norman.log &
 nohup python3 -u regular_ae.py sena_2 efficiency norman > ./../../logs/ablation_study/ae_sena_2_1layer_efficiency_norman.log &
+nohup python3 -u regular_ae.py sena_3 efficiency norman > ./../../logs/ablation_study/ae_sena_3_1layer_efficiency_norman.log &
 
 nohup python3 -u regular_ae.py sena_delta_0 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_0_2layer_efficiency_norman.log &
 nohup python3 -u regular_ae.py sena_delta_1 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_1_2layer_efficiency_norman.log &

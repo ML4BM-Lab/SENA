@@ -8,10 +8,30 @@ nohup python3 -u regular_ae.py regular interpretability norman 2 > ./../../logs/
 
 # sena
 nohup python3 -u regular_ae.py sena_0 interpretability norman > ./../../logs/ablation_study/ae_sena_0_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_0 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_0_1layer_interpretability_norman_1.log &
+nohup python3 -u regular_ae.py sena_0 interpretability norman_3 > ./../../logs/ablation_study/ae_sena_0_1layer_interpretability_norman_3.log &
+
 nohup python3 -u regular_ae.py sena_1 interpretability norman > ./../../logs/ablation_study/ae_sena_1_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_1 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_1_1layer_interpretability_norman_1.log &
+nohup python3 -u regular_ae.py sena_1 interpretability norman_3 > ./../../logs/ablation_study/ae_sena_1_1layer_interpretability_norman_3.log &
+
 nohup python3 -u regular_ae.py sena_2 interpretability norman > ./../../logs/ablation_study/ae_sena_2_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_2 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_2_1layer_interpretability_norman_1.log &
+nohup python3 -u regular_ae.py sena_2 interpretability norman_3 > ./../../logs/ablation_study/ae_sena_2_1layer_interpretability_norman_3.log &
+
+
+nohup python3 -u regular_ae.py sena_3 interpretability norman > ./../../logs/ablation_study/ae_sena_3_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_3 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_3_1layer_interpretability_norman_1.log &
+nohup python3 -u regular_ae.py sena_3 interpretability norman_3 > ./../../logs/ablation_study/ae_sena_3_1layer_interpretability_norman_3.log &
+
+
 nohup python3 -u regular_ae.py sena_0.3 interpretability norman > ./../../logs/ablation_study/ae_sena_03_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_0.3 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_03_1layer_interpretability_norman_1.log &
+nohup python3 -u regular_ae.py sena_0.3 interpretability norman_3 > ./../../logs/ablation_study/ae_sena_03_1layer_interpretability_norman_3.log &
+
+
 nohup python3 -u regular_ae.py sena_0.01 interpretability norman > ./../../logs/ablation_study/ae_sena_001_1layer_interpretability_norman.log &
+nohup python3 -u regular_ae.py sena_0.01 interpretability norman_1 > ./../../logs/ablation_study/ae_sena_001_1layer_interpretability_norman_1.log &
 
 
 nohup python3 -u regular_ae.py sena_delta_0 interpretability norman 2 > ./../../logs/ablation_study/ae_sena_delta_0_2layer_interpretability_norman.log &

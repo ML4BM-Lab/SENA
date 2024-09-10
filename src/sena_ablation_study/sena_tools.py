@@ -26,7 +26,7 @@ import math as m
 from collections import Counter
 
 """dataset"""
-def load_norman_2019_dataset():
+def load_norman_2019_dataset(num_gene_th=5):
 
     def load_gene_go_assignments():
 
@@ -43,7 +43,7 @@ def load_norman_2019_dataset():
 
         #keep only genesets when containing more than 5 genes
         counter_genesets_df = pd.DataFrame(Counter(GO_to_ensembl_id_assignment['GO_id']),index=[0]).T
-        genesets_in = counter_genesets_df[counter_genesets_df.values >= 5].index
+        genesets_in = counter_genesets_df[counter_genesets_df.values >= num_gene_th].index
         GO_to_ensembl_id_assignment = GO_to_ensembl_id_assignment[GO_to_ensembl_id_assignment['GO_id'].isin(genesets_in)]
 
         #redefine gos

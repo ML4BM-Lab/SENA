@@ -201,6 +201,7 @@ if __name__ == '__main__':
     modeltype = sys.argv[1]
     analysis = sys.argv[2]
     dataset = sys.argv[3]
+    num_gene_th = 5 if '_' not in dataset else int(dataset.split('_')[-1])
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
     
     #define seeds
@@ -220,12 +221,11 @@ if __name__ == '__main__':
     for i in range(nseeds):
 
         # Load data
-        if dataset == 'norman':
-            adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ens_gene_dict = st.load_norman_2019_dataset()
+        if 'norman' in dataset:
+            adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ens_gene_dict = st.load_norman_2019_dataset(num_gene_th=num_gene_th)
 
         #split train/test
-        dataset = torch.tensor(adata.X.todense()).float()
-        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.1)
+        train_data, test_data = train_test_split(torch.tensor(adata.X.todense()).float(), stratify = adata.obs['guide_ids'], test_size = 0.1)
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
         #run the model
