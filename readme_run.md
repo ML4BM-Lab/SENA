@@ -114,22 +114,30 @@ nohup python3 -u variational_ae.py l1_7 interpretability topgo 2 > ./../../logs/
 ## ------------------------------------------------------- AE --------------------------------------------------------------
 
 # regular
-nohup python3 -u regular_ae.py regular_orig efficiency topgo > ./../../logs/ablation_study/ae_regular_orig_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py regular efficiency topgo > ./../../logs/ablation_study/ae_regular_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py regular efficiency topgo 2 > ./../../logs/ablation_study/ae_regular_2layer_efficiency_topgo.log &
 
 # sena
 nohup python3 -u regular_ae.py sena_0 efficiency topgo > ./../../logs/ablation_study/ae_sena_0_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py sena_1 efficiency topgo > ./../../logs/ablation_study/ae_sena_1_1layer_efficiency_topgo.log &
-nohup python3 -u regular_ae.py sena_3 efficiency topgo > ./../../logs/ablation_study/ae_sena_3_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_2 efficiency topgo > ./../../logs/ablation_study/ae_sena_2_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_0.3 efficiency topgo > ./../../logs/ablation_study/ae_sena_03_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_0.1 efficiency topgo > ./../../logs/ablation_study/ae_sena_01_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_0.01 efficiency topgo > ./../../logs/ablation_study/ae_sena_001_1layer_efficiency_topgo.log &
 
-nohup python3 -u regular_ae.py sena_bias_0 efficiency topgo > ./../../logs/ablation_study/ae_sena_bias_0_1layer_efficiency_topgo.log &
-nohup python3 -u regular_ae.py sena_bias_1 efficiency topgo > ./../../logs/ablation_study/ae_sena_bias_1_1layer_efficiency_topgo.log &
-nohup python3 -u regular_ae.py sena_bias_3 efficiency topgo > ./../../logs/ablation_study/ae_sena_bias_3_1layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_0 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_delta_0_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_1 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_1_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_2 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_2_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_0.3 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_delta_03_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_0.1 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_delta_01_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py sena_delta_0.01 efficiency topgo 2 > ./../../logs/ablation_study/ae_sena_delta_001_2layer_efficiency_topgo.log &
 
 # l1
 nohup python3 -u regular_ae.py l1_3 efficiency topgo > ./../../logs/ablation_study/ae_l1_3_1layer_efficiency_topgo.log &
 nohup python3 -u regular_ae.py l1_5 efficiency topgo > ./../../logs/ablation_study/ae_l1_5_1layer_efficiency_topgo.log &
-nohup python3 -u regular_ae.py l1_7 efficiency topgo > ./../../logs/ablation_study/ae_l1_7_1layer_efficiency_topgo.log &
+
+nohup python3 -u regular_ae.py l1_3 efficiency topgo 2 > ./../../logs/ablation_study/ae_l1_3_2layer_efficiency_topgo.log &
+nohup python3 -u regular_ae.py l1_5 efficiency topgo 2 > ./../../logs/ablation_study/ae_l1_5_2layer_efficiency_topgo.log &
 
 ## -------------------------------------------------------- VAE -------------------------------------------------------------------
 # regular

@@ -205,12 +205,12 @@ def run_model(mode, seed, analysis = 'interpretability'):
 
         if 'delta' in mode:
             sp_num = float(mode.split('_')[2])
-            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
+            sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
             model = SENADeltaVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
         else:
             sp_num = float(mode.split('_')[1])
-            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
+            sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
             model = SENAVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
     elif mode[:2] == 'l1':
@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
         #split train/test
         dataset = torch.tensor(adata.X.todense()).float()
-        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.3)
+        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.1)
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
         #run the model

@@ -198,10 +198,10 @@ def compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = 'sena
         knockout_cells = na_activity_score[knockout]
 
         #compute affected genesets
-        if '0' in mode:
-            affected_genesets = [geneset for geneset in gos if geneset in gene_go_dict[ensembl_genename_dict[knockout]]]
-            belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, len(affected_genesets), mode=mode)
-            assert all(np.array(sorted([np.where(np.array(gos) == x)[0][0] for x in affected_genesets])) == np.array(sorted(belonging_genesets)))
+        if mode[:4] == 'sena':
+            belonging_genesets = [geneset for geneset in gos if geneset in gene_go_dict[ensembl_genename_dict[knockout]]]
+            #belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, len(affected_genesets), mode=mode)
+            #assert all(np.array(sorted([np.where(np.array(gos) == x)[0][0] for x in affected_genesets])) == np.array(sorted(belonging_genesets)))
         else:
             belonging_genesets = compute_layer_weight_contribution(model, adata, knockout, ens_knockout, 100, mode=mode) 
 

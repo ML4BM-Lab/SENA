@@ -13,6 +13,8 @@ importlib.reload(st)
 import os
 import pickle
 import sys
+import time
+
 
 class Autoencoder(nn.Module):
     def __init__(self, input_size, latent_size):
@@ -64,27 +66,7 @@ class SENA(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder
-        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
-       
-        # Decoder
-        self.decoder = nn.Linear(latent_size, input_size)
-
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.lrelu(x)
-        x = self.decoder(x)
-        return x
-
-class SENABias(nn.Module):
-
-    def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
-        super(SENABias, self).__init__()
-
-        # Activation Functions
-        self.lrelu = nn.LeakyReLU()
-
-        # Encoder
-        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp, bias=True)
        
         # Decoder
         self.decoder = nn.Linear(latent_size, input_size)
@@ -104,7 +86,7 @@ class SENADelta(nn.Module):
         self.lrelu = nn.LeakyReLU()
 
         # Encoder
-        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp, bias=True)
         self.delta = nn.Linear(latent_size, latent_size)
        
         # Decoder
@@ -119,23 +101,10 @@ class SENADelta(nn.Module):
 
 def run_model(mode, seed, analysis = 'interpretability'):
 
+    ##measure time
+    starttime = time.time()
+
     if mode == 'regular':
-
-        if analysis == 'interpretability':
-
-            model = Autoencoder(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
-
-        elif analysis == 'efficiency':
-
-            sena_model = SENA(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict).to('cuda')
-
-            sena_trainable = sena_model.encoder.mask.sum().__float__() + (len(gos)*adata.X.shape[1] + sena_model.decoder.bias.shape[0])
-            latent_size = m.ceil(sena_trainable / (2*adata.X.shape[1]+2)) #  sena_W / (2*input+2)]
- 
-            model = Autoencoder(input_size = adata.X.shape[1], latent_size = latent_size).to('cuda')
-            #params = sum([np.prod(p.size()) for p in filter(lambda p: p.requires_grad, model.parameters())])
-
-    elif mode == 'regular_orig':
         if nlayers == 1:
             model = Autoencoder(input_size = adata.X.shape[1], latent_size = len(gos)).to('cuda')
         else:
@@ -145,20 +114,13 @@ def run_model(mode, seed, analysis = 'interpretability'):
 
         if 'delta' in mode:
             sp_num = float(mode.split('_')[2])
-            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
+            sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
             model = SENADelta(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
-
-        elif 'bias' in mode:
-
-            sp_num = float(mode.split('_')[2])
-            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
-            model = SENABias(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
         else:
             sp_num = float(mode.split('_')[1])
-            sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
+            sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
             model = SENA(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
-
 
     elif mode[:2] == 'l1':
 
@@ -178,13 +140,13 @@ def run_model(mode, seed, analysis = 'interpretability'):
     results = []
     
     # Training Loop
-    epochs = 250 #if analysis == 'efficiency' else 50
-    report_epoch = 2 if analysis == 'efficiency' else 5
+    epochs = 250 if analysis == 'efficiency' else 250
+    report_epoch = 2 if analysis == 'efficiency' else 10
 
     """train"""
     for epoch in range(epochs):
 
-        epoch_train_mse, epoch_test_mse = [], []
+        epoch_train_mse = []
         for batched_exp in train_loader:
             optimizer.zero_grad()
             output = model(batched_exp.cuda())
@@ -202,6 +164,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
 
         """metrics"""
         if not epoch%report_epoch:
+
             if analysis == 'interpretability':
                 ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
                 summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
@@ -209,13 +172,8 @@ def run_model(mode, seed, analysis = 'interpretability'):
 
             elif analysis == 'efficiency':
                 
-                test_mse = criterion(model(test_data.cuda()), test_data.cuda()).__float__()
+                test_mse = torch.nn.functional.mse_loss(model(test_data.cuda()).detach().cpu(), test_data).__float__()
                 sparsity = st.compute_sparsity_contribution(model, test_data.cuda(), mode=mode, sparsity_th = 1e-5)
-
-                #plot weight matrix
-                # if epoch == (epochs-2) and seed == (nseeds-1):
-                #     st.plot_weight_distribution(model, epoch, mode)
-
                 summary_analysis_ep = pd.DataFrame({'epoch': epoch, 'train_mse': np.mean(epoch_train_mse),
                                                     'test_mse': test_mse, 'mode': mode, 'sparsity':sparsity}, index = [0])
 
@@ -231,6 +189,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
     #add seed
     results_df = pd.concat(results)
     results_df['seed'] = seed
+    results_df['time'] = time.time() - starttime
 
     return results_df
 
@@ -243,7 +202,7 @@ if __name__ == '__main__':
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
     
     #define seeds
-    nseeds = 3 if analysis == 'efficiency' else 5
+    nseeds = 2 if analysis == 'efficiency' else 3
 
     #init 
     fpath = os.path.join('./../../result/ablation_study',f'ae_{modeltype}')
@@ -263,7 +222,7 @@ if __name__ == '__main__':
 
         #split train/test
         dataset = torch.tensor(adata.X.todense()).float()
-        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.3)
+        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.1)
 
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 

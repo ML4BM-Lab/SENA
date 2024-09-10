@@ -336,32 +336,33 @@ def compute_recall_metrics(mode = '1layer', methods = [], subsample = 'topgo', m
 """AE"""
 def _call_ae():
 
-    #compare sena vs regular
-    methods = ['sena_bias_0', 'sena_bias_1', 'sena_bias_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    #plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo')
-    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
-    compute_recall_metrics(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
-    compute_recall_metrics(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo')
+    """1layer""" #compare sena vs regular
+    
+    methods = ['sena_0', 'sena_1', 'sena_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
+    plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
+    plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
+
+    methods = ['sena_0', 'sena_1', 'sena_3']
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo')
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
 
 
-    #sena-delta
+    """2layer""" #sena-delta
+    
     methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    #plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
-    #plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
-    compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
-    compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
+    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
+    #plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
 
-
-    #plot_outlier_analysis(metric = 'z_diff', subsample = 'raw')
-    #plot_outlier_analysis(metric = 'recall_at_100', subsample = 'raw')
+    methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3']
+    plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', subsample = 'topgo')
+    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', subsample = 'topgo')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, subsample = 'topgo')
+    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, subsample = 'topgo')
 
     #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
     #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', subsample = 'topgo')
-
-    #plot mse analysis
-    #methods = ['sena_bias_0', 'sena_bias_1', 'sena_bias_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    #plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo')
-    #plot_sparsity_analysis(mode = '1layer', methods=methods, subsample = 'topgo')
 
 def _call_vae():
 
@@ -371,20 +372,22 @@ def _call_vae():
     plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
     plot_mse_analysis(mode = '1layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
 
-    #plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo', structure='vae')
-    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
+    methods = ['sena_0','sena_1','sena_3']
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', structure='vae')
+    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
 
     """two layers layer"""
     methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']
     plot_mse_analysis(mode = '2layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_mse')
     plot_mse_analysis(mode = '2layer', methods = methods, subsample = 'topgo', structure='vae', metric='test_KL')
-    
     #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
     #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', , structure='vae')
 
-    #plot_outlier_analysis(mode='1layer', metric = 'z_diff', methods=methods, subsample = 'topgo')
-    #plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
+    methods = ['sena_delta_0','sena_delta_1','sena_delta_3']
+    plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, subsample = 'topgo', structure='vae')
+    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, subsample = 'topgo', structure='vae')
 
+    
 
 if __name__ == '__main__':
     
