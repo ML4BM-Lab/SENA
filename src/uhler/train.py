@@ -136,7 +136,7 @@ def train(
                                             ensembl_genename_dict = ens_gene_dict, ptb_targets = ptb_targets_affected)
             summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, mode = mode)
         else:
-            summary_analysis_ep = {'mode': mode}
+            summary_analysis_ep = pd.DataFrame({'mode': mode}, index = [0])
 
         summary_analysis_ep['epoch'] = n
         summary_analysis_ep['mmd_loss'] = mmdAv/ct
