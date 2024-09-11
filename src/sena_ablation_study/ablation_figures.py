@@ -16,24 +16,31 @@ matplotlib.rcParams['ps.fonttype'] = 42
 """efficient"""
 def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structure='ae', metric='test_mse', plot_type = 'std'):
 
-    def build_dataset():
+    def build_dataset(structure, beta):
 
         #mode
-        variables = ['mode','epoch',f'{metric}','seed']
+        variables = ['mode', 'epoch', f'{metric}', 'seed']
 
         ##
         arch_l = []
         for arch in methods:
-            
-            arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_efficiency_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
+            if structure == 'vae':
+                arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'vae_{arch}_ablation_efficiency_{mode}_{dataset}_beta_{beta}.tsv'), sep='\t', index_col=0)
+            else:
+                arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'"autoencoder"_{arch}_ablation_efficiency_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_mse[variables])
         
         df = pd.concat(arch_l)
+        df['beta'] = beta
         return df
 
     #retrieve dataset
     colors = sns.color_palette("Set2", len(methods))
-    df = build_dataset()
+
+    #
+    beta = float(structure.split('_')[-1]) if 'vae' in structure else 0
+    structure = structure.split('_')[0]
+    df = build_dataset(structure, beta)
 
     # Group by epoch and mode, then calculate the median and IQR for MSE
     if plot_type == 'quantile':
@@ -100,7 +107,10 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
     plt.legend()
 
     # Save the plot
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_{metric}_{dataset}.pdf'))
+    if 'vae' in structure:
+        plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_{metric}_{dataset}_beta_{beta}.pdf'))
+    else:
+        plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_all_ablation_{mode}_{metric}_{dataset}.pdf'))
 
     # Clear the plot
     plt.cla()
@@ -457,31 +467,39 @@ def _call_ae(layers='1layer'):
         #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
         #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman')
 
-def _call_vae():
+def _call_vae(layers='1layer', beta=1.0):
 
-    """single layer"""
-    #compare sena vs regular
-    methods = ['regular', 'sena_0','sena_1','sena_3', 'l1_3','l1_5','l1_7']
-    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
-    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
+    if layers == '1layer':
 
-    methods = ['sena_0','sena_1','sena_3']
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+        """single layer"""
+        #compare sena vs regular
+        methods = ['regular', 'sena_0', 'sena_1','sena_2', 'sena_3', 'l1_3']
+        plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_mse')
+        plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_KL')
 
-    """two layers layer"""
-    methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']
-    plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
-    plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', , structure='vae')
+        # methods = ['sena_0','sena_1','sena_3']
+        # plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
+        # plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
 
-    methods = ['sena_delta_0','sena_delta_1','sena_delta_3']
-    plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
-    plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+    elif layers == '2layer':
+
+        """two layers layer"""
+        methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']
+        plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
+        plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', , structure='vae')
+
+        methods = ['sena_delta_0','sena_delta_1','sena_delta_3']
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
 
     
 if __name__ == '__main__':
     
-    _call_ae(layers='2layer')
-    #_call_vae()
+    #_call_ae(layers='2layer')
+
+    #_call_vae(layers='1layer', beta=1.0)
+    #_call_vae(layers='1layer', beta=0.1)
+    #_call_vae(layers='1layer', beta=0.01)
+    _call_vae(layers='1layer', beta=10)
