@@ -179,9 +179,9 @@ class SENADeltaVAE(nn.Module):
         reconstructed_x = self.decoder(z)
         return reconstructed_x, mean, var 
 
-def run_model(mode, seed, analysis = 'interpretability'):
+def run_model(mode, seed, analysis = 'interpretability', beta=1):
 
-    def vae_loss(reconstructed_x, x, mean, var, beta=1, epsilon=1e-10):
+    def vae_loss(reconstructed_x, x, mean, var, beta):
         # Reconstruction loss (MSE or Binary Cross-Entropy)
         reconstruction_loss = F.mse_loss(reconstructed_x, x, reduction='mean')
         
@@ -243,7 +243,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
 
             optimizer.zero_grad()
             reconstructed_x, mean, logvar = model(batched_exp.cuda())
-            train_mse, train_KL = vae_loss(reconstructed_x, batched_exp.cuda(), mean, logvar)
+            train_mse, train_KL = vae_loss(reconstructed_x, batched_exp.cuda(), mean, logvar, beta=beta)
 
             if mode[:2] != 'l1':
                 total_loss = train_mse + train_KL
@@ -274,7 +274,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
                     reconstructed_x, mean, logvar = model(test_data.cuda())
                     test_mse, test_KL = vae_loss(reconstructed_x.detach().cpu(), 
                                                  test_data.cuda().detach().cpu(), mean.detach().cpu(),
-                                                 logvar.detach().cpu())
+                                                 logvar.detach().cpu(), beta=beta)
                 
                 #compute sparsity
                 sparsity = 0
@@ -306,13 +306,14 @@ if __name__ == '__main__':
     dataset = sys.argv[3]
     num_gene_th = 5 if '_' not in dataset else int(dataset.split('_')[-1])
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
+    beta = 1.0 if len(sys.argv) < 6 else float(sys.argv[5])
     
     #define seeds
     nseeds = 2 if analysis == 'efficiency' else 3
 
     #init 
-    fpath = os.path.join('./../../result/ablation_study',f'vae_{modeltype}')
-    fname = os.path.join(fpath,f'vae_{modeltype}_ablation_{analysis}_{nlayers}layer_{dataset}')
+    fpath = os.path.join('./../../result/ablation_study/',f'vae_{modeltype}')
+    fname = os.path.join(fpath,f'vae_{modeltype}_ablation_{analysis}_{nlayers}layer_{dataset}_beta_{beta}')
     results_dict = {}
 
     #if folder does not exist, create it
@@ -332,7 +333,7 @@ if __name__ == '__main__':
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
         #run the model
-        results.append(run_model(mode = modeltype, seed = i, analysis = analysis))
+        results.append(run_model(mode = modeltype, seed = i, analysis = analysis, beta=beta))
         
     ##build the dataframe and save
     if analysis != 'lcorr':

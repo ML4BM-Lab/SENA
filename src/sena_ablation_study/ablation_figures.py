@@ -439,11 +439,11 @@ def _call_ae(layers='1layer'):
 
     elif layers == '2layer': #"""2layer""" #sena-delta
     
-        methods = ['sena_delta_0', 'sena_delta_1','sena_delta_2','sena_delta_3', 'regular', 'l1_3']
+        methods = ['sena_delta_0', 'sena_delta_1','sena_delta_2','sena_delta_3', 'sena_delta_5', 'regular', 'l1_3','l1_5']
         plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman')
         #plot_sparsity_analysis(mode = '2layer', methods=methods, dataset = 'norman')
 
-        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2','sena_delta_3', 'sena_delta_0.3']
+        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2','sena_delta_3', 'sena_delta_5', 'sena_delta_0.3']
         plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = ['norman'])
         plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = ['norman'])
         #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
