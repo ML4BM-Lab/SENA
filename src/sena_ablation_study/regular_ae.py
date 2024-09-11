@@ -178,7 +178,6 @@ def run_model(mode, seed, analysis, gene_go_dict, ens_gene_dict):
                 summary_analysis_ep = pd.DataFrame({'epoch': epoch, 'train_mse': np.mean(epoch_train_mse),
                                                     'test_mse': test_mse, 'mode': mode}|sparsity, index = [0])
 
-                print(summary_analysis_ep)
             elif analysis == 'lcorr':
                 ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
                 summary_analysis_ep = st.compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df)

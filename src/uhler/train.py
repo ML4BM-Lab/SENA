@@ -26,7 +26,9 @@ def train(
     if log:
         wandb.init(project='cmvae', name=savedir.split('/')[-1])  
 
-    adata, _, ptb_targets, _, gos, rel_dict = load_norman_2019_dataset()
+    #load dataset
+    adata, _, _, ptb_targets_affected, gos, rel_dict, gene_go_dict, ens_gene_dict = load_norman_2019_dataset()
+
     cmvae = mod.CMVAE(
         dim = opts.dim,
         z_dim = opts.latdim,
@@ -129,8 +131,13 @@ def train(
             torch.save(cmvae, os.path.join(savedir, 'best_model.pt'))
 
         ## report
-        ttest_df = compute_activation_df(cmvae, adata, gos, scoretype = 'mu_diff', mode = mode)
-        summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
+        if mode[:4] == 'sena':
+            ttest_df = compute_activation_df(cmvae, adata, gos, scoretype = 'mu_diff', mode = mode, gene_go_dict= gene_go_dict, 
+                                            ensembl_genename_dict = ens_gene_dict, ptb_targets = ptb_targets_affected)
+            summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, mode = mode)
+        else:
+            summary_analysis_ep = {'mode': mode}
+
         summary_analysis_ep['epoch'] = n
         summary_analysis_ep['mmd_loss'] = mmdAv/ct
         summary_analysis_ep['recon_loss'] = reconAv/ct
@@ -146,7 +153,7 @@ def train(
         results.append(summary_analysis_ep)
 
     results_df = pd.concat(results)
-    results_df.to_csv(os.path.join(savedir, f'uhler_{mode}_summary.tsv'),sep='\t')
+    results_df.to_csv(os.path.join(savedir, f'uhler_{mode}_latdim_{opts.latdim}_summary.tsv'),sep='\t')
     print(results_df)
 
 # loss function definition

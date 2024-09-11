@@ -21,8 +21,11 @@ nohup python3 -u regular_ae.py sena_2 efficiency norman > ./../../logs/ablation_
 nohup python3 -u regular_ae.py sena_3 efficiency norman > ./../../logs/ablation_study/ae_sena_3_1layer_efficiency_norman.log &
 
 nohup python3 -u regular_ae.py sena_delta_0 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_0_2layer_efficiency_norman.log &
-nohup python3 -u regular_ae.py sena_delta_1 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_1_2layer_efficiency_norman.log &
-nohup python3 -u regular_ae.py sena_delta_2 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_2_2layer_efficiency_norman.log &
+nohup python3 -u regular_ae.py sena_delta_1 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_1_2layer_efficiency_norman.log &
+nohup python3 -u regular_ae.py sena_delta_2 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_2_2layer_efficiency_norman.log &
+nohup python3 -u regular_ae.py sena_delta_3 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_3_2layer_efficiency_norman.log &
+nohup python3 -u regular_ae.py sena_delta_5 efficiency norman 2 > ./../../logs/ablation_study/ae_sena_delta_3_2layer_efficiency_norman.log &
+
 
 # l1
 nohup python3 -u regular_ae.py l1_3 efficiency norman > ./../../logs/ablation_study/ae_l1_3_1layer_efficiency_norman.log &

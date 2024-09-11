@@ -35,7 +35,7 @@ def main(args):
 	np.random.seed(opts.seed)
 	random.seed(opts.seed)
 
-	dataloader, dataloader2, dim, cdim, ptb_targets = get_data(mode='train', batch_size=opts.batch_size, mode=opts.mode)
+	dataloader, dataloader2, dim, cdim, ptb_targets = get_data(mode=opts.mode, batch_size=opts.batch_size)
 
 	opts.dim = dim
 	if opts.latdim is None:

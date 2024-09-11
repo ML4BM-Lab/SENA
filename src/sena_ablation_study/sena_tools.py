@@ -104,7 +104,6 @@ def load_norman_2019_dataset(num_gene_th=5):
     return adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ensembl_genename_mapping_rev
 
 """tools"""
-
 def build_activity_score_df(model, adata, ptb_targets):
 
     na_activity_score = {}

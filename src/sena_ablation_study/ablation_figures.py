@@ -14,7 +14,6 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
 """efficient"""
-
 def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structure='ae', metric='test_mse', plot_type = 'std'):
 
     def build_dataset():
@@ -191,6 +190,89 @@ def compute_time_consumption(mode = '1layer', methods = [], dataset = 'norman', 
     print(time_stats)
 
 """interpretable"""
+def plot_outlier_analysis_combined(mode = '1layer', dataset = ['norman'], metric = 'z_diff', methods = [], structure='ae'):
+
+    def build_dataset():
+
+        ##
+        arch_l = []
+        for mod in mode:
+            for arch in methods:
+                if mod == '1layer':
+                    arch = arch.replace('_delta','')
+                for dt in dataset:
+                    arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mod}_{dt}.tsv'), sep='\t', index_col=0)
+                    arch_test_mse['dataset'] = dt
+                    arch_test_mse['th'] = arch.split('_')[-1]
+                    arch_test_mse['layer'] = mod
+                    arch_l.append(arch_test_mse)
+        
+        df = pd.concat(arch_l)
+        return df
+
+    #get data
+    df = build_dataset()
+
+    # Filter the DataFrame for the specified epochs
+    epochs_to_plot = [10, 200]
+    th_order = ['0', '3', '2', '1', '0.3'][::-1]
+    colors = sns.color_palette("Set2", len(epochs_to_plot))
+    
+    # Set up the figure
+    plt.figure(figsize=(12, 8))
+
+    # Define markers for 1layer and 2layer
+    markers = {'1layer': '^', '2layer': 's'}
+    linestyles = {'1layer': '--', '2layer': '-'}
+
+    # Loop through the epochs and colors
+    for epoch, color in zip(epochs_to_plot, colors):
+        # Filter the DataFrame for the current epoch
+        sub_df = df[df['epoch'] == epoch]
+
+        for layer in ['1layer', '2layer']:
+            # Filter data for the current layer and sort according to the specified th order
+            layer_df = sub_df[sub_df['layer'] == layer]
+            
+            # Group by 'th' to calculate the mean and std across seeds
+            aggregated_df = layer_df.groupby('th').agg(
+                recall_mean=(metric, 'mean'),
+                recall_std=(metric, 'std')
+            ).reindex(th_order).reset_index()
+
+            # Plot the mean recall_at_100 as a function of th
+            plt.plot(
+                aggregated_df['th'], aggregated_df['recall_mean'],
+                marker=markers[layer], linestyle=linestyles[layer], color=color,
+                label=f'{layer} - epoch {epoch}', markersize=8
+            )
+            
+            # Fill the area between (mean - std) and (mean + std)
+            plt.fill_between(
+                aggregated_df['th'], 
+                aggregated_df['recall_mean'] - aggregated_df['recall_std'], 
+                aggregated_df['recall_mean'] + aggregated_df['recall_std'], 
+                color=color, alpha=0.2
+            )
+
+    # Add labels and title
+    plt.title(f'{metric} vs Threshold (th) for 1 Layer and 2 Layer Models', fontsize=16)
+    plt.xlabel('Threshold (th)', fontsize=14)
+    plt.ylabel(metric, fontsize=14)
+    plt.xticks(th_order)
+
+    # Add gridlines for readability
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend(title='Model Layer')
+    plt.show()
+
+    # Save the plot (if needed)
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_groupal_ablation_{mode}_{metric}_{dataset[-1]}.pdf'))
+
+    # Clear the plot
+    plt.cla()
+    plt.clf()
+    plt.close()
 
 def plot_outlier_analysis(mode = '1layer', dataset = ['norman'], methods = [], name = 'all', metric = 'z_diff', structure='ae'):
 
@@ -241,32 +323,29 @@ def plot_outlier_analysis(mode = '1layer', dataset = ['norman'], methods = [], n
     else:
 
         df = df[df['epoch'] == df['epoch'].max()].reset_index(drop=True)
-        melted_df = pd.melt(df, id_vars=['epoch', 'mode', 'dataset', 'seed'], value_vars=[metric], var_name='Metric', value_name='metric_value')
+        df['dataset'] = df['dataset'].replace({'norman':'norman_5'})
+       
+        grouped = df.groupby(['epoch', 'mode','dataset']).agg(
+        metric_mean=(metric, 'mean'),
+        metric_std=(metric, 'std')
+        ).reset_index()
 
-        # grouped = df.groupby(['epoch', 'mode','dataset']).agg(
-        # metric_mean=(metric, 'mean'),
-        # metric_std=(metric, 'std')
-        # ).reset_index()
-
-        # # Loop over each method and plot the corresponding data
-        # for method, color in zip(methods, colors):
-        #     # Filter data for the current method
-        #     grouped_method = grouped[grouped['mode'] == method]
+        # Loop over each method and plot the corresponding data
+        for method, color in zip(methods, colors):
+            # Filter data for the current method
+            grouped_method = grouped[grouped['mode'] == method]
             
-        #     # Plot the mean metric as a function of the dataset (x-axis)
-        #     plt.plot(grouped_method['dataset'], grouped_method['metric_mean'], '-o', label=method, color=color)
+            # Plot the mean metric as a function of the dataset (x-axis)
+            plt.plot(grouped_method['dataset'], grouped_method['metric_mean'], '--^', label=method, color=color, markersize=10)
             
-        #     # Fill the area between (mean - std) and (mean + std) for error bars
-        #     plt.fill_between(
-        #         grouped_method['dataset'], 
-        #         grouped_method['metric_mean'] - grouped_method['metric_std'], 
-        #         grouped_method['metric_mean'] + grouped_method['metric_std'], 
-        #         color=color, 
-        #         alpha=0.2
-        #     )
-
-        # Create boxplots for each dataset and method
-        sns.boxplot(x='dataset', y='metric_value', hue='mode', data=melted_df, palette=colors)
+            # Fill the area between (mean - std) and (mean + std) for error bars
+            plt.fill_between(
+                grouped_method['dataset'], 
+                grouped_method['metric_mean'] - grouped_method['metric_std'], 
+                grouped_method['metric_mean'] + grouped_method['metric_std'], 
+                color=color, 
+                alpha=0.2
+            )
 
         # Add labels and title
         plt.xlabel('Dataset', fontsize=14)
@@ -278,13 +357,12 @@ def plot_outlier_analysis(mode = '1layer', dataset = ['norman'], methods = [], n
 
     # Show the legend
     plt.legend()
-    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{name}_ablation_{mode}_{metric}_{dataset[0]}.pdf'))
+    plt.savefig(os.path.join('./../../figures','ablation_study',f'{structure}_{name}_ablation_{mode}_{metric}_{dataset[-1]}.pdf'))
     plt.cla()
     plt.clf()
     plt.close()
 
 """latent correlation"""
-
 def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman', epoch = 5, structure='ae'):
 
     ## load data
@@ -344,35 +422,40 @@ def compute_recall_metrics(mode = '1layer', methods = [], dataset = 'norman', me
         print(f'{subset_lepoch["mode"].iloc[i]}, {metric}: {subset_lepoch["metric_mean"].iloc[i]} +- {subset_lepoch["metric_std"].iloc[i]}')
 
 """AE"""
-def _call_ae():
+def _call_ae(layers='1layer'):
 
-    """1layer""" #compare sena vs regular
+    if layers == '1layer': #"""1layer""" #compare sena vs regular
+
+        methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
+        plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
+        plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
+        compute_time_consumption(mode = '1layer', methods=methods, dataset = 'norman')
+
+        methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'sena_0.3']
+        plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = ['norman_1','norman_2','norman_3','norman_4','norman'])
+        plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = ['norman_1','norman_2','norman_3','norman_4','norman'])
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
+
+    elif layers == '2layer': #"""2layer""" #sena-delta
     
-    methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
-    plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
-    plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
-    compute_time_consumption(mode = '1layer', methods=methods, dataset = 'norman')
+        methods = ['sena_delta_0', 'sena_delta_1','sena_delta_2','sena_delta_3', 'regular', 'l1_3']
+        plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman')
+        #plot_sparsity_analysis(mode = '2layer', methods=methods, dataset = 'norman')
 
-    methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'sena_0.3']
-    #plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman')
-    plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = ['norman','norman_1'])
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
+        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2','sena_delta_3', 'sena_delta_0.3']
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = ['norman'])
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = ['norman'])
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
 
-    """2layer""" #sena-delta
-    
-    methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3', 'regular_orig', 'l1_3', 'l1_5', 'l1_7']
-    #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
-    #plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
+    elif layers == 'combined':
 
-    methods = ['sena_delta_0', 'sena_delta_1','sena_delta_3']
-    #plot_outlier_analysis(mode='2layer', metric = 'z_diff', methods = methods, name = 'all', dataset = 'norman')
-    #plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, name = 'all', dataset = 'norman')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
-    #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
+        """combined plots"""
+        plot_outlier_analysis_combined(mode=['1layer','2layer'], metric = 'recall_at_100', methods=methods, dataset = ['norman'])
 
-    #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
-    #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman')
+        #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
+        #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman')
 
 def _call_vae():
 
@@ -400,5 +483,5 @@ def _call_vae():
     
 if __name__ == '__main__':
     
-    _call_ae()
+    _call_ae(layers='2layer')
     #_call_vae()

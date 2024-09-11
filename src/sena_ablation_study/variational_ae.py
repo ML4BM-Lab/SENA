@@ -278,6 +278,7 @@ def run_model(mode, seed, analysis = 'interpretability'):
                 
                 #compute sparsity
                 sparsity = 0
+                
                 # sparsity = st.compute_sparsity_contribution(model, test_data.cuda(), mode=mode, sparsity_th = 1e-5)
                 summary_analysis_ep = pd.DataFrame({'epoch': epoch, 'train_mse': np.mean(epoch_train_mse),
                                                     'test_mse': test_mse.__float__(), 'train_KL': np.mean(epoch_train_kl),
@@ -285,12 +286,6 @@ def run_model(mode, seed, analysis = 'interpretability'):
                                                     'mode': mode, 'sparsity':sparsity}, index = [0])
 
                 print(f'Epoch {epoch+1}, TEST MSE Loss: {test_mse.__float__()}, TEST KL Loss: {test_KL.__float__()}')
-    
-            # elif analysis == 'lcorr':
-
-            #     ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
-            #     summary_analysis_ep = st.compute_latent_correlation_analysis(model, adata, ptb_targets, gos, ttest_df)
-            #     summary_analysis_ep['epoch'] = epoch
             
             results.append(summary_analysis_ep)
 
@@ -308,7 +303,8 @@ if __name__ == '__main__':
     ##define inputs
     modeltype = sys.argv[1]
     analysis = sys.argv[2]
-    subsample = sys.argv[3]
+    dataset = sys.argv[3]
+    num_gene_th = 5 if '_' not in dataset else int(dataset.split('_')[-1])
     nlayers = 1 if len(sys.argv) < 5 else sys.argv[4]
     
     #define seeds
@@ -316,7 +312,7 @@ if __name__ == '__main__':
 
     #init 
     fpath = os.path.join('./../../result/ablation_study',f'vae_{modeltype}')
-    fname = os.path.join(fpath,f'vae_{modeltype}_ablation_{analysis}_{nlayers}layer_{subsample}')
+    fname = os.path.join(fpath,f'vae_{modeltype}_ablation_{analysis}_{nlayers}layer_{dataset}')
     results_dict = {}
 
     #if folder does not exist, create it
@@ -328,11 +324,11 @@ if __name__ == '__main__':
     for i in range(nseeds):
 
         # Load data
-        adata, ptb_targets, ptb_targets_ens, gos, rel_dict = st.load_norman_2019_dataset(subsample=subsample)
+        if 'norman' in dataset:
+            adata, ptb_targets, ptb_targets_ens, gos, rel_dict, gene_go_dict, ens_gene_dict = st.load_norman_2019_dataset(num_gene_th=num_gene_th)
 
         #split train/test
-        dataset = torch.tensor(adata.X.todense()).float()
-        train_data, test_data = train_test_split(dataset, stratify = adata.obs['guide_ids'], test_size = 0.1)
+        train_data, test_data = train_test_split(torch.tensor(adata.X.todense()).float(), stratify = adata.obs['guide_ids'], test_size = 0.1)
         train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
         #run the model
