@@ -286,21 +286,29 @@ def plot_outlier_analysis_combined(mode = '1layer', dataset = ['norman'], metric
 
 def plot_outlier_analysis(mode = '1layer', dataset = ['norman'], methods = [], name = 'all', metric = 'z_diff', structure='ae'):
 
-    def build_dataset():
+    def build_dataset(structure, beta):
+
+        #mode
+        variables = ['mode', 'epoch', f'{metric}', 'seed']
 
         ##
         arch_l = []
         for arch in methods:
             for dt in dataset:
-                arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{dt}.tsv'), sep='\t', index_col=0)
-                arch_test_mse['dataset'] = dt
-                arch_l.append(arch_test_mse)
+                if structure == 'vae':
+                    arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'vae_{arch}_ablation_interpretability_{mode}_{dt}_beta_{beta}.tsv'), sep='\t', index_col=0)
+                else:
+                    arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'"autoencoder"_{arch}_ablation_interpretability_{mode}_{dt}.tsv'), sep='\t', index_col=0)
+                arch_l.append(arch_mse[variables])
         
         df = pd.concat(arch_l)
+        df['beta'] = beta
         return df
 
     colors = sns.color_palette("Set2", len(methods))
-    df = build_dataset()
+    beta = float(structure.split('_')[-1]) if 'vae' in structure else 0
+    structure = structure.split('_')[0]
+    df = build_dataset(structure, beta)
 
     # Create a figure
     plt.figure(figsize=(12, 8))
@@ -406,21 +414,26 @@ def plot_latent_correlation(mode = '1layer', analysis = 'lcorr', modeltype = 'se
     plt.clf()
     plt.close()
 
-def compute_recall_metrics(mode = '1layer', methods = [], dataset = 'norman', metric = 'recall_at_25', structure='ae'):
+def compute_metrics(mode = '1layer', methods = [], dataset = 'norman', metric = 'recall_at_25', structure='ae', analysis='interpretability'):
 
-    def build_dataset():
+    def build_dataset(structure, beta):
 
         ##
         arch_l = []
         for arch in methods:
             
-            arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'{"autoencoder" if structure=="ae" else "vae"}_{arch}_ablation_interpretability_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
+            if structure == 'vae':
+                arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'vae_{arch}_ablation_{analysis}_{mode}_{dataset}_beta_{beta}.tsv'), sep='\t', index_col=0)
+            else:
+                arch_test_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'"autoencoder"_{arch}_ablation_{analysis}_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
             arch_l.append(arch_test_mse)
         
         df = pd.concat(arch_l)
         return df
 
-    df = build_dataset()
+    beta = float(structure.split('_')[-1]) if 'vae' in structure else 0
+    structure = structure.split('_')[0]
+    df = build_dataset(structure, beta)
 
     grouped = df.groupby(['epoch', 'mode']).agg(
             metric_mean=(metric, 'mean'),
@@ -430,6 +443,7 @@ def compute_recall_metrics(mode = '1layer', methods = [], dataset = 'norman', me
     subset_lepoch = grouped[grouped['epoch'] == grouped['epoch'].max()].reset_index(drop=True)
     for i in range(subset_lepoch.shape[0]):
         print(f'{subset_lepoch["mode"].iloc[i]}, {metric}: {subset_lepoch["metric_mean"].iloc[i]} +- {subset_lepoch["metric_std"].iloc[i]}')
+
 
 """AE"""
 def _call_ae(layers='1layer'):
@@ -444,8 +458,8 @@ def _call_ae(layers='1layer'):
         methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'sena_0.3']
         plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = ['norman_1','norman_2','norman_3','norman_4','norman'])
         plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = ['norman_1','norman_2','norman_3','norman_4','norman'])
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
+        #compute_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+        #compute_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
 
     elif layers == '2layer': #"""2layer""" #sena-delta
     
@@ -456,8 +470,8 @@ def _call_ae(layers='1layer'):
         methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2','sena_delta_3', 'sena_delta_5', 'sena_delta_0.3']
         plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = ['norman'])
         plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = ['norman'])
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
+        #compute_metrics(mode='2layer', metric = 'recall_at_100', methods = methods, dataset = 'norman')
+        #compute_metrics(mode='2layer', metric = 'recall_at_25', methods = methods, dataset = 'norman')
 
     elif layers == 'combined':
 
@@ -467,39 +481,61 @@ def _call_ae(layers='1layer'):
         #analyze single architecture (e.g. sena) between "mean of affected expression DE" and "latent space DE" at a specific epochs
         #plot_latent_correlation(epoch=45, mode = '1layer', analysis = 'lcorr', modeltype = 'sena_0', dataset = 'norman')
 
+    elif layers == 'table':
+
+        methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
+        compute_metrics(mode='1layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency')
+        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3', 'regular', 'l1_3', 'l1_5']
+        compute_metrics(mode='2layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency')
+        
 def _call_vae(layers='1layer', beta=1.0):
 
     if layers == '1layer':
 
         """single layer"""
         #compare sena vs regular
-        methods = ['regular', 'sena_0', 'sena_1','sena_2', 'sena_3', 'l1_3']
-        plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_mse')
-        plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_KL')
+        methods = ['regular', 'sena_0', 'sena_1', 'sena_2', 'sena_3', 'l1_3']
+        #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_mse')
+        #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman', structure = f'vae_{beta}', metric = 'test_KL')
 
-        # methods = ['sena_0','sena_1','sena_3']
-        # plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
-        # plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+        methods = ['sena_0','sena_1','sena_2','sena_3']
+        plot_outlier_analysis(mode='1layer', metric = 'recall_at_25', methods = methods, dataset = ['norman'], structure=f'vae_{beta}')
+        plot_outlier_analysis(mode='1layer', metric = 'recall_at_100', methods = methods, dataset = ['norman'], structure=f'vae_{beta}')
 
     elif layers == '2layer':
 
         """two layers layer"""
-        methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3', 'l1_5', 'l1_7']
-        plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_mse')
-        plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure='vae', metric='test_KL')
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
-        #compute_recall_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', , structure='vae')
+        methods = ['regular', 'sena_delta_0','sena_delta_1','sena_delta_3', 'l1_3']
+        #plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure=f'vae_{beta}', metric='test_mse')
+        #plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman', structure=f'vae_{beta}', metric='test_KL')
+        #compute_metrics(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure=f'vae_{beta}')
+        #compute_metrics(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', , structure=f'vae_{beta}')
 
-        methods = ['sena_delta_0','sena_delta_1','sena_delta_3']
-        plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = 'norman', structure='vae')
-        plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = 'norman', structure='vae')
+        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3']
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_25', methods=methods, dataset = ['norman'], structure=f'vae_{beta}')
+        plot_outlier_analysis(mode='2layer', metric = 'recall_at_100', methods=methods, dataset = ['norman'], structure=f'vae_{beta}')
+
+    elif layers == 'table':
+
+        methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
+        #compute_metrics(mode='1layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+        #compute_metrics(mode='1layer', metric = 'test_KL', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+
+        methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3', 'regular', 'l1_3', 'l1_5']
+        compute_metrics(mode='2layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+        compute_metrics(mode='2layer', metric = 'test_KL', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+
 
     
 if __name__ == '__main__':
     
-    #_call_ae(layers='2layer')
+    #_call_ae(layers='table')
+    #_call_vae(layers='table')
 
-    #_call_vae(layers='1layer', beta=1.0)
+    _call_vae(layers='2layer', beta=1.0)
     #_call_vae(layers='1layer', beta=0.1)
     #_call_vae(layers='1layer', beta=0.01)
-    _call_vae(layers='1layer', beta=10)
+
+    #_call_vae(layers='2layer', beta=10)
+    #_call_vae(layers='2layer', beta=0.01)
+    #_call_vae(layers='2layer', beta=1)

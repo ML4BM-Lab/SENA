@@ -136,6 +136,45 @@ class SENAVAE(nn.Module):
         reconstructed_x = self.decoder(z)
         return reconstructed_x, mean, var 
 
+class SENAFullVAE(nn.Module):
+    def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
+        super(SENAFullVAE, self).__init__()
+
+        # Activation Functions
+        self.lrelu = nn.LeakyReLU()
+
+        # Encoder 
+        self.encoder = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)  # Mean for latent space
+        self.encoder_var = st.NetActivity_layer(input_size, latent_size, relation_dict, device = device, sp=sp)  # Log variance for latent space
+       
+        # Decoder
+        self.decoder = nn.Linear(latent_size, input_size)
+
+    def encode(self, x):
+        # Get the mean and log variance from the encoder
+        mean = self.encoder(x)
+        var = F.softplus(self.encoder_var(x))
+        return mean, var
+
+    def reparameterize(self, mean, var):
+        # Sample from the latent space using the reparameterization trick
+        std = torch.exp(0.5 * var)  # Standard deviation
+        eps = torch.randn_like(std)  # Random normal tensor
+        z = mean + eps * std  # Reparameterization trick
+        return z
+
+    def forward(self, x):
+
+        # Encoding step: get mean and log variance
+        mean, var = self.encode(x)
+        
+        # Reparameterization step: sample from latent space
+        z = self.reparameterize(mean, var)
+        
+        # Decoding step: reconstruct the input
+        reconstructed_x = self.decoder(z)
+        return reconstructed_x, mean, var 
+
 class SENADeltaVAE(nn.Module):
     def __init__(self, input_size, latent_size, relation_dict, device = 'cuda', sp = 0):
         super(SENADeltaVAE, self).__init__()
@@ -204,6 +243,7 @@ def run_model(mode, seed, analysis = 'interpretability', beta=1):
     elif mode[:4] == 'sena':
 
         if 'delta' in mode:
+            
             sp_num = float(mode.split('_')[2])
             sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
             model = SENADeltaVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
@@ -211,7 +251,11 @@ def run_model(mode, seed, analysis = 'interpretability', beta=1):
         else:
             sp_num = float(mode.split('_')[1])
             sp = eval(f'10**-{sp_num}') if sp_num > 0 else 0
-            model = SENAVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
+
+            if 'full' not in mode:
+                model = SENAFullVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
+            else:
+                model = SENAVAE(input_size = adata.X.shape[1], latent_size = len(gos), relation_dict=rel_dict, sp=sp).to('cuda')
 
     elif mode[:2] == 'l1':
 
@@ -263,10 +307,10 @@ def run_model(mode, seed, analysis = 'interpretability', beta=1):
 
             if analysis == 'interpretability':
 
-                ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode)
-                summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, adata, ptb_targets, mode = mode)
+                ttest_df = st.compute_activation_df(model, adata, gos, scoretype = 'mu_diff', mode = mode, 
+                                                    gene_go_dict=gene_go_dict, ensembl_genename_dict=ens_gene_dict, ptb_targets=ptb_targets)
+                summary_analysis_ep = st.compute_outlier_activation_analysis(ttest_df, mode = mode)
                 summary_analysis_ep['epoch'] = epoch
-                print(summary_analysis_ep['recall_at_100'].values[0])
 
             elif analysis == 'efficiency':
                 
