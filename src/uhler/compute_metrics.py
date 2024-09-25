@@ -52,10 +52,10 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
 
         return df
 
-    ## train 
-    print("train metrics")
-    df_train = evaluate_model(fold='train')
-    df_train['mode'] = 'train'
+    # ## train 
+    # print("train metrics")
+    # df_train = evaluate_model(fold='train')
+    # df_train['mode'] = 'train'
 
     ## test
     print("test metrics")
@@ -68,7 +68,7 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
     df_double['mode'] = 'double'
 
     ## concat
-    df = pd.concat([df_train, df_test, df_double]).reset_index(drop=True)
+    df = pd.concat([df_test, df_double]).reset_index(drop=True)
     df['seed'] = seed
     df['latdim'] = latdim
     df['model_name'] = model_name
@@ -81,14 +81,28 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
 #only one seed
 seed = 42
 df_l = []
-tuplas = [('full_go_sena_delta_1', 70),
-          ('full_go_sena_delta_1', 35),
-          ('full_go_sena_delta_1', 10),
-          ('full_go_sena_delta_1', 5),
+tuplas = [
+          ('full_go_sena_delta_2', 105),
+          ('full_go_sena_delta_2', 70),
+          ('full_go_sena_delta_2', 35),
+          ('full_go_sena_delta_2', 10),
+          ('full_go_sena_delta_2', 5),
+          ('full_go_sena_delta_0', 105),
+          ('full_go_sena_delta_0', 70),
+          ('full_go_sena_delta_0', 35),
+          ('full_go_sena_delta_0', 10),
+          ('full_go_sena_delta_0', 5),
+          ('full_go_sena_delta_3', 105),
+          ('full_go_sena_delta_3', 70),
+          ('full_go_sena_delta_3', 35),
+          ('full_go_sena_delta_3', 10),
+          ('full_go_sena_delta_3', 5),
+          ('full_go_regular', 105),
           ('full_go_regular', 70),
           ('full_go_regular', 35),
           ('full_go_regular', 10),
-          ('full_go_regular', 5),]
+          ('full_go_regular', 5)
+          ]
 
 ## model name
 for model_name, latdim in tuplas:
@@ -96,6 +110,7 @@ for model_name, latdim in tuplas:
 
 #create dfs
 df = pd.concat(df_l)
+df.to_csv(os.path.join('./../../result/uhler/post_analysis/performance_metrics/performance_table.tsv'),sep='\t')
 print(df)
 
 

@@ -25,7 +25,7 @@ def build_activity_score_df(model, adata, ptb_targets):
     for int_type in ptb_targets+['']: #+control
         
         obs = adata[adata.obs['guide_ids'] == int_type].X.todense()
-        int_df = pd.DataFrame(model.encoder(torch.tensor(obs).float().to('cuda')).detach().cpu().numpy())
+        int_df = pd.DataFrame(model.fc1(torch.tensor(obs).double().to('cuda')).detach().cpu().numpy())
         new_int_type = int_type if int_type != '' else 'ctrl'
         na_activity_score[new_int_type] = int_df.to_numpy()
 
@@ -183,18 +183,17 @@ def load_norman_2019_dataset(num_gene_th=5):
     adata = adata[(~adata.obs['guide_ids'].str.contains(','))]
     
     #build genesets
-    ptb_targets = sorted(adata.obs['guide_ids'].unique().tolist())[1:]
     gos, GO_to_ensembl_id_assignment, gene_go_dict = load_gene_go_assignments()
 
     #compute perturbations with at least 1 gene set for interpretability metrics
-    ptb_targets_affected, ptb_targets_ens_affected, ensembl_genename_mapping_rev = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
+    ptb_targets_affected, _, ensembl_genename_mapping_rev = compute_affecting_perturbations(GO_to_ensembl_id_assignment) 
 
     #build gene-go rel
     rel_dict = build_gene_go_relationships(adata, gos, GO_to_ensembl_id_assignment)
 
     """double data"""
+    ptb_targets = sorted(adata.obs['guide_ids'].unique().tolist())[1:]
     double_adata = sc.read_h5ad(fpath).copy()
-    double_adata = double_adata[:, double_adata.var_names.isin(GO_to_ensembl_id_assignment['ensembl_id'])]
     double_adata = double_adata[(double_adata.obs['guide_ids'].str.contains(',')) & (double_adata.obs['guide_ids'].map(lambda x: all([y in ptb_targets for y in x.split(',')])))]
 
     return adata, double_adata, ptb_targets, ptb_targets_affected, gos, rel_dict, gene_go_dict, ensembl_genename_mapping_rev

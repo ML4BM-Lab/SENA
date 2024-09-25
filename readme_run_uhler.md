@@ -12,10 +12,27 @@ nohup python3 -u run.py --trainmode "regular" --latdim 35 --seed 42 --epochs 100
 nohup python3 -u run.py --trainmode "regular" --latdim 10 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42_latdim10.out & 
 nohup python3 -u run.py --trainmode "regular" --latdim 5 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_regular_seed_42_latdim5.out & 
 
-# our proposed encoder
-nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_42.out &
-nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 13 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_13.out &
-nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 7 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_7.out & 
+# our proposed encoder LAMBDA = 0
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 105 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_42_latdim105.out & 
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 70 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_42_latdim70.out &
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 35 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_42_latdim35.out &
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 10 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_42_latdim10.out &
+nohup python3 -u run.py --trainmode "sena_delta_0" --latdim 5 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_0_seed_42_latdim5.out &
+
+# our proposed encoder LAMBDA = 10^-3
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 105 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_3_42_latdim105.out & 
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 70 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_3_seed_42_latdim70.out &
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 35 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_3_seed_42_latdim35.out &
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 10 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_3_seed_42_latdim10.out &
+nohup python3 -u run.py --trainmode "sena_delta_3" --latdim 5 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_3_seed_42_latdim5.out &
+
+# our proposed encoder LAMBDA = 10^-2
+nohup python3 -u run.py --trainmode "sena_delta_2" --latdim 105 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_2_seed_42_latdim105.out &
+nohup python3 -u run.py --trainmode "sena_delta_2" --latdim 70 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_2_seed_42_latdim70.out &
+nohup python3 -u run.py --trainmode "sena_delta_2" --latdim 35 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_2_seed_42_latdim35.out &
+nohup python3 -u run.py --trainmode "sena_delta_2" --latdim 10 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_2_seed_42_latdim10.out &
+nohup python3 -u run.py --trainmode "sena_delta_2" --latdim 5 --seed 42 --epochs 100 > ./../../logs/uhler/full_go_sena_delta_2_seed_42_latdim5.out &
+
 
 # some other experiments
 # nohup python3 -u run.py --trainmode "NA_NA" --latdim 16 > ./../../logs/uhler/full_go_NA_NA_.out &

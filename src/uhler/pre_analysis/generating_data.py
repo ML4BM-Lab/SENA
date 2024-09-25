@@ -21,11 +21,11 @@ from scipy.stats import gaussian_kde
 import utils as ut
 
 ##
-model_name = 'full_go_regular'
-latdim = 70
+model_name = 'full_go_sena_delta_1'
+latdim = 105
 seed = 42
 device = "cuda:0"
-adata, _, ptb_targets, _, gos, rel_dict = ut.load_norman_2019_dataset(subsample = 'topgo')
+adata, _, ptb_targets, _, gos, rel_dict, _, _ = ut.load_norman_2019_dataset()
 adata.obs.reset_index(drop=True, inplace=True)
 
 """build pert idx dict"""

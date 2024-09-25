@@ -173,12 +173,14 @@ def loss_function(y_hat, y, x_recon, x, mu, var, G, MMD_sigma, kernel_num, match
     MSE = matching_function_recon(x_recon, x)
     logvar = torch.log(var)
     KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    KLD = torch.sum(KLD_element).mul_(-0.5)/x.shape[0]
+    #KLD = torch.sum(KLD_element).mul_(-0.5)/x.shape[0]
+    KLD = torch.mean(KLD_element).mul_(-0.5)/x.shape[0]
 
     if G is None:
         L1 = 0
     else:
-        L1 = torch.norm(torch.triu(G,diagonal=1),1)  # L1 norm for sparse G
+        #L1 = torch.norm(torch.triu(G,diagonal=1),1)  # L1 norm for sparse G
+        L1 = torch.norm(torch.triu(G,diagonal=1),1) / torch.sum(torch.triu(torch.ones_like(G), diagonal=1))
 
     return MMD, MSE, KLD, L1
 
