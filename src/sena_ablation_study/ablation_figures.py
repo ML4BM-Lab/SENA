@@ -544,8 +544,8 @@ def _call_vae(layers='1layer', beta=1.0):
     elif layers == 'table':
 
         methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
-        #compute_metrics(mode='1layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
-        #compute_metrics(mode='1layer', metric = 'test_KL', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+        compute_metrics(mode='1layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
+        compute_metrics(mode='1layer', metric = 'test_KL', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
 
         methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3', 'regular', 'l1_3', 'l1_5']
         compute_metrics(mode='2layer', metric = 'test_mse', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
@@ -560,11 +560,12 @@ if __name__ == '__main__':
     #recall@100 
     #_call_ae(layers='combined')
 
-    #mse
-    _call_ae(layers='1layer')
+    """Table 1 and Table 2"""
+    #_call_ae(layers='table')
+    _call_vae(layers='table')
     
     #_call_ae(layers='table')
-    #_call_vae(layers='table')
+    
 
     #_call_vae(layers='1layer', beta=1.0)
     #_call_vae(layers='1layer', beta=0.1)

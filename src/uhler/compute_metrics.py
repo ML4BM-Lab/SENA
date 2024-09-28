@@ -79,7 +79,7 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
     return df
     
 #only one seed
-seed = 42
+seeds = [42,13]
 df_l = []
 tuplas = [
           ('full_go_sena_delta_2', 105),
@@ -105,8 +105,9 @@ tuplas = [
           ]
 
 ## model name
-for model_name, latdim in tuplas:
-    df_l.append(compute_metrics(model_name = model_name, seed = 42, latdim = latdim, save=False))
+for seed in seeds:
+    for model_name, latdim in tuplas:
+        df_l.append(compute_metrics(model_name = model_name, seed = seed, latdim = latdim, save=False))
 
 #create dfs
 df = pd.concat(df_l)
