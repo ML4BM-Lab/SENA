@@ -570,14 +570,14 @@ if __name__ == '__main__':
     """hits@100"""
     """combined plots"""
     methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3']
-    plot_outlier_analysis_combined(mode=['1layer','2layer'], metric = 'recall_at_100', methods=methods, dataset = ['norman'], structure=['ae','vae_1.0'])
+    #plot_outlier_analysis_combined(mode=['1layer','2layer'], metric = 'recall_at_100', methods=methods, dataset = ['norman'], structure=['ae','vae_1.0'])
 
     """mse"""
     methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
     #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
     #plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
     methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3', 'regular', 'l1_3', 'l1_5']
-    #plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman')
+    plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman')
 
     """ae"""
 
