@@ -28,6 +28,9 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
                 arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'vae_{arch}_ablation_efficiency_{mode}_{dataset}_beta_{beta}.tsv'), sep='\t', index_col=0)
             else:
                 arch_mse = pd.read_csv(os.path.join('./../../result','ablation_study',f'{structure}_{arch}',f'autoencoder_{arch}_ablation_efficiency_{mode}_{dataset}.tsv'), sep='\t', index_col=0)
+                newrow = arch_mse.iloc[[-1],:]
+                newrow['epoch'] = 250
+                arch_mse = pd.concat([arch_mse, newrow],axis=0)
             arch_l.append(arch_mse[variables])
         
         df = pd.concat(arch_l)
@@ -35,13 +38,15 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
         return df
 
     #retrieve dataset
-    colors = sorted(sns.color_palette("Set2", len(methods)))
+    colors = sorted(sns.color_palette("husl", len(methods)))
     #color_mapping = dict(zip(methods, colors))
 
     #
     beta = float(structure.split('_')[-1]) if 'vae' in structure else 0
     structure = structure.split('_')[0]
     df = build_dataset(structure, beta)
+    df = df[df['epoch'] % 50 == 0]
+
 
     # Group by epoch and mode, then calculate the median and IQR for MSE
     if plot_type == 'quantile':
@@ -73,7 +78,7 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
         method_group = grouped[grouped['mode'] == method]
         
         if plot_type == 'std':
-            plt.plot(method_group['epoch'], method_group['metric_mean'], '-o', label=method.capitalize(), color=color, markersize=4)
+            plt.plot(method_group['epoch'], method_group['metric_mean'], '-o', label=method.capitalize(), color=color,markersize=15, linewidth=4,markeredgewidth=2, markeredgecolor='white')
             plt.fill_between(
                 method_group['epoch'], 
                 method_group['metric_mean'] - method_group['metric_std']/2, 
@@ -82,7 +87,7 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
                 alpha=0.2
             )
         else:
-            plt.plot(method_group['epoch'], method_group['metric_median'], '-o', label=method.capitalize(), color=color, markersize=4)
+            plt.plot(method_group['epoch'], method_group['metric_median'], '-o', label=method.capitalize(), color=color, markersize=12)
             plt.fill_between(
                 method_group['epoch'], 
                 method_group['lower_bound'], 
@@ -95,17 +100,17 @@ def plot_mse_analysis(mode = '1layer', methods = [], dataset = 'norman', structu
     # Set y-axis to log scale
     plt.yscale('log')
 
-
     # Add a title and labels
-    plt.title(f'Comparison of {metric} Across Epochs: SENA vs Regular (Median & IQR)', fontsize=16)
-    plt.xlabel('Epoch', fontsize=14)
-    plt.ylabel(f'Median {metric} (log scale)', fontsize=14)
+    plt.xlabel('Epoch', fontsize=20)
+    plt.ylabel(f'Median {metric} (log scale)', fontsize=20)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
 
     # Add gridlines for better readability
-    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.grid(True,  which='both', linestyle='-', lw=2)
 
     # Show the legend
-    plt.legend()
+    plt.legend(fontsize=14, title_fontsize=15, ncol=2)
 
     # Save the plot
     if 'vae' in structure:
@@ -137,10 +142,10 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], dataset = 'norman', st
         return df
 
     #retrieve dataset
-    colors = sorted(sns.color_palette("Set2", len(methods)))
+    #colors = sorted(sns.color_palette("Set2", len(methods)))
+    colors = sorted(sns.color_palette("husl", len(methods)))
     color_mapping = dict(zip(methods, colors))
     df = build_dataset()
-    
 
     #keep last threshold
     sparsity_thresholds = [x for x in df.columns if 'sparsity' in x][0]
@@ -152,21 +157,25 @@ def plot_sparsity_analysis(mode = '1layer', methods = [], dataset = 'norman', st
     # Melt the DataFrame to long format for easier plotting with seaborn
     long_df = last_epoch.melt(id_vars=['mode', 'epoch'], value_vars=sparsity_thresholds, 
                             var_name='Sparsity Threshold', value_name='Sparsity')
+    
+    long_df['Sparsity'] = 1 - long_df['Sparsity']
 
     # Sort by 'sparsity_1e-08_mean'
-    grouped_sorted = long_df.sort_values(by='Sparsity', ascending=False).reset_index(drop=True)
+    grouped_sorted = long_df.sort_values(by='Sparsity', ascending=True).reset_index(drop=True)
 
     # Set up the figure
-    plt.figure(figsize=(5, 8))
+    plt.figure(figsize=(6, 8))
 
     # Create the barplot (Seaborn will automatically calculate the mean and std for error bars)
-    sns.barplot(x='mode', y='Sparsity', hue='mode', data=grouped_sorted, errorbar='sd', palette=color_mapping, capsize=0.1)
+    ax = sns.barplot(x='mode', y='Sparsity', dodge=True, data=grouped_sorted, ci='sd', palette=color_mapping, capsize=0.1)
+    ax.set_axisbelow(True)
 
     # Set up the labels and title
-    plt.title('Boxplot of Sparsity Thresholds Across Modes', fontsize=16)
-    plt.xlabel('Sparsity Threshold', fontsize=14)
-    plt.ylabel('Sparsity', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.xlabel('Sparsity Threshold', fontsize=20)
+    plt.ylabel('#weights > 1e-8', fontsize=20)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.grid(True, linestyle='-', lw=2)
     plt.show()
 
     #save figure
@@ -240,16 +249,17 @@ def plot_outlier_analysis_combined(mode = '1layer', dataset = ['norman'], metric
 
     # Filter the DataFrame for the specified epochs
     epochs_to_plot = [200]
-    th_order = ['0', '3', '2', '1', '0.3'][::-1]
+    th_order = ['0', '3', '2', '1'][::-1]
     colors = sns.color_palette("Set2", 2*2*1)
     #colors = ["#c57c3c", "#b3669e"]
     
     # Set up the figure
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(6, 8))
+    #plt.figure(figsize=(12, 8))
 
     # Define markers for 1layer and 2layer
-    markers = {'1layer': '^', '2layer': 's'}
-    linestyles = {'1layer': '--', '2layer': '-'}
+    markers = {'1layer': '^', '2layer': 'o'}
+    linestyles = {'1layer': '--', '2layer': '--'}
 
     # Loop through the epochs and colors
     i = 0
@@ -273,7 +283,9 @@ def plot_outlier_analysis_combined(mode = '1layer', dataset = ['norman'], metric
                 plt.plot(
                     aggregated_df['th'], aggregated_df['recall_mean'],
                     marker=markers[layer], linestyle=linestyles[layer], color=color,
-                    label=f'{struct} - {layer} - epoch {epoch}', markersize=8
+                    label=f'{struct} - {layer} - epoch {epoch}', markersize=15, linewidth=4,
+                    markeredgewidth=2,  # Set marker edge width (adjust thickness as needed)
+                    markeredgecolor='white'  # Set marker edge color (border color)
                 )
                 
                 # Fill the area between (mean - std) and (mean + std)
@@ -285,14 +297,14 @@ def plot_outlier_analysis_combined(mode = '1layer', dataset = ['norman'], metric
                 )
 
     # Add labels and title
-    plt.title(f'{metric} vs Threshold (th) for 1 Layer and 2 Layer Models', fontsize=16)
-    plt.xlabel('Threshold (th)', fontsize=14)
-    plt.ylabel(metric, fontsize=14)
-    plt.xticks(th_order)
+    plt.xlabel('Threshold (λ)', fontsize=20)
+    plt.ylabel(metric, fontsize=20)
+    plt.xticks(th_order, fontsize=15)
+    plt.yticks(fontsize=15)
 
     # Add gridlines for readability
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.legend(title='Model Layer')
+    plt.grid(True, linestyle='-', lw=2)
+    plt.legend(title='Model Layer', fontsize=14, title_fontsize=15)
     plt.show()
 
     # Save the plot (if needed)
@@ -552,8 +564,20 @@ def _call_vae(layers='1layer', beta=1.0):
         compute_metrics(mode='2layer', metric = 'test_KL', methods = methods, dataset = 'norman', analysis='efficiency', structure=f'vae_{beta}')
 
 
-    
 if __name__ == '__main__':
+
+    
+    """hits@100"""
+    """combined plots"""
+    methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3']
+    plot_outlier_analysis_combined(mode=['1layer','2layer'], metric = 'recall_at_100', methods=methods, dataset = ['norman'], structure=['ae','vae_1.0'])
+
+    """mse"""
+    methods = ['sena_0', 'sena_1', 'sena_2', 'sena_3', 'regular', 'l1_3', 'l1_5']
+    #plot_mse_analysis(mode = '1layer', methods = methods, dataset = 'norman')
+    #plot_sparsity_analysis(mode = '1layer', methods=methods, dataset = 'norman')
+    methods = ['sena_delta_0', 'sena_delta_1', 'sena_delta_2', 'sena_delta_3', 'regular', 'l1_3', 'l1_5']
+    #plot_mse_analysis(mode = '2layer', methods = methods, dataset = 'norman')
 
     """ae"""
 
@@ -562,7 +586,7 @@ if __name__ == '__main__':
 
     """Table 1 and Table 2"""
     #_call_ae(layers='table')
-    _call_vae(layers='table')
+    #_call_vae(layers='table')
     
     #_call_ae(layers='table')
     

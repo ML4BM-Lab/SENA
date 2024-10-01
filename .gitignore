@@ -18,3 +18,4 @@ logs/
 *.txt
 *.yaml
 src/uhler/wandb
+*.md

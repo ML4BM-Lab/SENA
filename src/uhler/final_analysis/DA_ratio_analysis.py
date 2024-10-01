@@ -97,7 +97,7 @@ DAR_df_sena_delta_0['latdim'] = pd.Categorical(
 sns.set(style='whitegrid')  # Adds a grid to the plot
 
 # Adjusting the data to plot with seaborn
-plt.figure(figsize=(8, 10))
+plt.figure(figsize=(8, 6))
 ax = plt.gca()
 
 # Create a boxplot with customizations
@@ -128,11 +128,13 @@ plt.xlabel('Latent Dimension', fontsize=20)
 plt.ylabel('DAR', fontsize=20)
 plt.tick_params(axis='x', which='both', bottom=True, top=False, length=5, width=1, direction='out')
 plt.tick_params(axis='y', which='both', bottom=True, top=False, length=5, width=1, direction='out')
-plt.xticks(fontsize=13)
-plt.yticks(fontsize=13)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.yscale('log')
+
 
 # Add grid lines
-plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+plt.grid(True, linestyle='-', lw=2)
 
 # Adjust layout
 plt.tight_layout()

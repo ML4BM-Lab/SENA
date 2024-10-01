@@ -107,6 +107,10 @@ def compute_geneset_contribution_latent_space():
 
     def compute_geneset_contribution_ls(mode):
 
+        if mode == 'fc_mean':
+            model_mode = model.fc_mean
+        else:
+            model_mode = model.fc_var
         ctrl_cells = fc1[fc1.index == 'ctrl'].to_numpy().mean(axis=0)
         contribution_list = []
         for knockout in tqdm(ptb_targets_affected):
@@ -122,11 +126,11 @@ def compute_geneset_contribution_latent_space():
             ##knockout
             knockout_exp = fc1[fc1.index == knockout].to_numpy().mean(axis=0)
 
-            absmean_affected_contr = eval(f'np.mean(np.vstack([model.{mode}.weight.T[i,:].detach().cpu() * ctrl_cells[i] for i in affected_genesets_idx]),axis=0)')
-            absmean_affected_knockout = eval(f'np.median(np.vstack([model.{mode}.weight.T[i,:].detach().cpu() * knockout_exp[i] for i in affected_genesets_idx]),axis=0)')
+            absmean_affected_contr = np.mean(np.vstack([model_mode.weight.T[i,:].detach().cpu() * ctrl_cells[i] for i in affected_genesets_idx]),axis=0)
+            absmean_affected_knockout = np.median(np.vstack([model_mode.weight.T[i,:].detach().cpu() * knockout_exp[i] for i in affected_genesets_idx]),axis=0)
 
-            absmean_nonaffected_contr = eval(f'np.median(np.vstack([model.{mode}.weight.T[i,:].detach().cpu() * ctrl_cells[i] for i in nonaffected_genesets_idx]),axis=0)')
-            absmean_nonaffected_knockout = eval(f'np.median(np.vstack([model.{mode}.weight.T[i,:].detach().cpu() * knockout_exp[i] for i in nonaffected_genesets_idx]),axis=0)')
+            absmean_nonaffected_contr = np.median(np.vstack([model_mode.weight.T[i,:].detach().cpu() * ctrl_cells[i] for i in nonaffected_genesets_idx]),axis=0)
+            absmean_nonaffected_knockout = np.median(np.vstack([model_mode.weight.T[i,:].detach().cpu() * knockout_exp[i] for i in nonaffected_genesets_idx]),axis=0)
 
             score_affected = np.abs(absmean_affected_knockout - absmean_affected_contr)
             score_non_affected = np.abs(absmean_nonaffected_knockout - absmean_nonaffected_contr)
@@ -140,7 +144,7 @@ def compute_geneset_contribution_latent_space():
             
         score_df = pd.concat(contribution_list)
         score_df_melt = pd.melt(score_df, id_vars = 'knockout')
-        score_df_melt['value'] = score_df_melt['value'].values#MinMaxScaler().fit_transform(score_df_melt['value'].values.reshape(-1,1))
+        score_df_melt['value'] = score_df_melt['value'].values
         score_df_melt['mode'] = mode
         return score_df_melt
 
@@ -155,7 +159,7 @@ def compute_geneset_contribution_latent_space():
     pairs = [((layer, 'non_affected'), (layer, 'affected')) for layer in ['fc_mean','fc_var']]
 
     # Adjusting the data to plot with seaborn
-    plt.figure(figsize=(8, 10))
+    plt.figure(figsize=(8, 6))
     ax = sns.boxplot(x='mode',y='value',hue='variable',
                      data=df_latent_space,
                      fliersize=3,

@@ -26,9 +26,6 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
     # read different trained models here
     savedir = f'./../../result/uhler/{model_name}/seed_{seed}_latdim_{latdim}' 
 
-    with open(f'{savedir}/ptb_targets.pkl', 'rb') as f:
-        ptb_targets = pickle.load(f)
-
     model = torch.load(f'{savedir}/best_model.pt')
     mode = 'CMVAE'
 
@@ -58,9 +55,9 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
     # df_train['mode'] = 'train'
 
     ## test
-    print("test metrics")
-    df_test = evaluate_model(fold='test')
-    df_test['mode'] = 'test'
+    # print("test metrics")
+    # df_test = evaluate_model(fold='test')
+    # df_test['mode'] = 'test'
 
     ## doubles
     print("double metrics")
@@ -68,7 +65,7 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
     df_double['mode'] = 'double'
 
     ## concat
-    df = pd.concat([df_test, df_double]).reset_index(drop=True)
+    df = pd.concat([df_double]).reset_index(drop=True)
     df['seed'] = seed
     df['latdim'] = latdim
     df['model_name'] = model_name
@@ -82,26 +79,31 @@ def compute_metrics(model_name = 'full_go_regular', seed = 42, latdim = 70, save
 seeds = [42,13]
 df_l = []
 tuplas = [
+        ('full_go_sena_delta_0', 105),
+        ('full_go_sena_delta_0', 70),
+        ('full_go_sena_delta_0', 35),
+        ('full_go_sena_delta_0', 10),
+        ('full_go_sena_delta_0', 5),
           ('full_go_sena_delta_2', 105),
           ('full_go_sena_delta_2', 70),
           ('full_go_sena_delta_2', 35),
           ('full_go_sena_delta_2', 10),
           ('full_go_sena_delta_2', 5),
-          ('full_go_sena_delta_0', 105),
-          ('full_go_sena_delta_0', 70),
-          ('full_go_sena_delta_0', 35),
-          ('full_go_sena_delta_0', 10),
-          ('full_go_sena_delta_0', 5),
-          ('full_go_sena_delta_3', 105),
-          ('full_go_sena_delta_3', 70),
-          ('full_go_sena_delta_3', 35),
-          ('full_go_sena_delta_3', 10),
-          ('full_go_sena_delta_3', 5),
-          ('full_go_regular', 105),
-          ('full_go_regular', 70),
-          ('full_go_regular', 35),
-          ('full_go_regular', 10),
-          ('full_go_regular', 5)
+        ('full_go_sena_delta_3', 105),
+        ('full_go_sena_delta_3', 70),
+        ('full_go_sena_delta_3', 35),
+        ('full_go_sena_delta_3', 10),
+        ('full_go_sena_delta_3', 5),
+           ('full_go_sena_delta_1', 105),
+           ('full_go_sena_delta_1', 70),
+           ('full_go_sena_delta_1', 35),
+           ('full_go_sena_delta_1', 10),
+           ('full_go_sena_delta_1', 5),
+           ('full_go_regular', 105),
+           ('full_go_regular', 70),
+           ('full_go_regular', 35),
+           ('full_go_regular', 10),
+           ('full_go_regular', 5)
           ]
 
 ## model name

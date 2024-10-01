@@ -24,6 +24,7 @@ class NetActivity_layer(torch.nn.Module):
             for latent_go in self.relation_dict[i]:
                 mask[i,latent_go] = 1
 
+        print(f"Using lambda λ = {sp}")
         self.mask = mask
         self.mask[self.mask == 0] = sp
 
@@ -85,7 +86,7 @@ class CMVAE(nn.Module):
             #connect initial gene space to gene sets
             sp_num = float(mode.split('_')[2])
             sp = eval(f'1e-{int(sp_num)}') if sp_num > 0 else 0
-            self.fc1 = NetActivity_layer(self.dim, len(gos), rel_dict, device = device, bias = True, sp = 0)
+            self.fc1 = NetActivity_layer(self.dim, len(gos), rel_dict, device = device, bias = True, sp = sp)
 
             #now MLPs
             self.fc_mean = nn.Linear(len(gos), z_dim)
