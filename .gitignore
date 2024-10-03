@@ -20,3 +20,5 @@ logs/
 src/uhler/wandb
 *.md
 !data/required_files/
+src/encoder_vs_decoder/
+src/misc/
