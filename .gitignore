@@ -19,3 +19,4 @@ logs/
 *.yaml
 src/uhler/wandb
 *.md
+!data/required_files/
