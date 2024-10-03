@@ -4,6 +4,7 @@ data/*
 theis_paper/*
 *.pyc
 *.png
+!imgs/model_overview.png
 *.pdf
 ksport/*
 wandb/*
