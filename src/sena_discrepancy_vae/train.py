@@ -1,188 +1,141 @@
-import torch
-import torch.nn as nn
-from tqdm import tqdm
-import wandb
-from copy import deepcopy
-import numpy as np
 import os
-import pandas as pd
-import importlib
+from collections import defaultdict
+from dataclasses import asdict
+
+import mlflow
 import model as mod
-from collections import defaultdict, Counter
-importlib.reload(mod)
-from utils import MMD_loss, compute_activation_df, compute_outlier_activation_analysis, load_norman_2019_dataset
+import numpy as np
+import torch
+from torch.optim import Adam
+from tqdm import tqdm
+from utils import loss_function
 
-# fit CMVAE to data
+
+# Train CMVAE to data
 def train(
-    dataloader,
-    opts,
-    device,
-    savedir,
-    log,
-    order=None,
-    nonlinear=False,
-    ):
+    dataloader: torch.utils.data.DataLoader,
+    opts: "Options",
+    device: torch.device,
+    savedir: str,
+    logger,
+    data_handler,
+) -> None:
 
-    if log:
-        wandb.init(project='cmvae', name=savedir.split('/')[-1])  
+    if opts.log:
+        logger.info(f"Starting mlflow server locally")
+        mlflow.start_run()
+        mlflow.log_params(asdict(opts))
 
-    #load dataset
-    adata, _, _, ptb_targets_affected, gos, rel_dict, gene_go_dict, ens_gene_dict = load_norman_2019_dataset()
+    logger.info(f"Started training with {opts.epochs} epochs on device: {device}")
 
-    cmvae = mod.CMVAE(
-        dim = opts.dim,
-        z_dim = opts.latdim,
-        c_dim = opts.cdim,
-        device = device, 
-        mode = opts.trainmode,
-        gos = gos, 
-        rel_dict = rel_dict
+    # Load dataset
+    # adata, _, _, ptb_targets_affected, gos, rel_dict, gene_go_dict, ens_gene_dict = load_norman_2019_dataset()
+
+    # Initialize model
+    cmvae = (
+        mod.CMVAE(
+            dim=opts.dim,
+            z_dim=opts.latdim,
+            c_dim=opts.cdim,
+            device=device,
+            mode=opts.model,
+            gos=data_handler.gos,
+            rel_dict=data_handler.rel_dict,
+            sena_lambda=opts.sena_lambda,
+        )
+        .double()
+        .to(device)
     )
 
-    cmvae.double()
-    cmvae.to(device)
-    optimizer = torch.optim.Adam(params=cmvae.parameters(), lr=opts.lr) #do not use Adam if sparse 
+    optimizer = Adam(params=cmvae.parameters(), lr=opts.lr)
 
     cmvae.train()
-    print("Training for {} epochs...".format(str(opts.epochs)))
+    logger.info(f"Training for {opts.epochs} epochs...")
 
-    ## Loss parameters
-    beta_schedule = torch.zeros(opts.epochs) # weight on the KLD
-    beta_schedule[:10] = 0
-    beta_schedule[10:] = torch.linspace(0, opts.mxBeta, opts.epochs-10) 
-    alpha_schedule = torch.zeros(opts.epochs) # weight on the MMD
-    alpha_schedule[:] = opts.mxAlpha
-    alpha_schedule[:5] = 0
-    alpha_schedule[5:int(opts.epochs/2)] = torch.linspace(0, opts.mxAlpha, int(opts.epochs/2)-5) 
-    alpha_schedule[int(opts.epochs/2):] = opts.mxAlpha
-
-    ## Softmax temperature 
-    temp_schedule = torch.ones(opts.epochs)
-    temp_schedule[5:] = torch.linspace(1, opts.mxTemp, opts.epochs-5)
+    # Loss parameter schedules
+    beta_schedule = torch.cat(
+        [torch.zeros(10), torch.linspace(0, opts.mxBeta, opts.epochs - 10)]
+    )
+    alpha_schedule = torch.cat(
+        [
+            torch.zeros(5),
+            torch.linspace(0, opts.mxAlpha, int(opts.epochs / 2) - 5),
+            torch.full((opts.epochs - int(opts.epochs / 2),), opts.mxAlpha),
+        ]
+    )
+    temp_schedule = torch.cat(
+        [torch.ones(5), torch.linspace(1, opts.mxTemp, opts.epochs - 5)]
+    )
 
     min_train_loss = np.inf
-    results = []
-    mode = opts.trainmode
 
-    #best_model = deepcopy(cmvae)
-    for n in range(0, opts.epochs):
-        lossAv = 0
-        ct = 0
-        mmdAv = 0
-        reconAv = 0
-        klAv = 0
-        L1Av = 0
-        dd = defaultdict(list)
-        for (i, X) in enumerate(dataloader):
-            
-            x = X[0]
-            y = X[1]
-            c = X[2]
-            
-            if cmvae.cuda:
-                x = x.to(device)
-                y = y.to(device)
-                c = c.to(device)
-                
+    # Training loop
+    for epoch in range(opts.epochs):
+        epoch_losses = defaultdict(float)
+
+        # Using tqdm for progress bar during batch iteration
+        for batch in tqdm(
+            dataloader, desc=f"Epoch {epoch + 1}/{opts.epochs}", unit="batch"
+        ):
+
+            x, y, c = batch[0].to(device), batch[1].to(device), batch[2].to(device)
+
             optimizer.zero_grad()
-            y_hat, x_recon, z_mu, z_var, G, bc = cmvae(x, c, c, num_interv=1, temp=temp_schedule[n])
-            mmd_loss, recon_loss, kl_loss, L1 = loss_function(y_hat, y, x_recon, x, z_mu, z_var, G, opts.MMD_sigma, opts.kernel_num, opts.matched_IO)
-            loss = alpha_schedule[n] * mmd_loss + recon_loss + beta_schedule[n]*kl_loss + opts.lmbda*L1
-            loss = recon_loss
+            y_hat, x_recon, z_mu, z_var, G, bc = cmvae(
+                x, c, c, num_interv=1, temp=temp_schedule[epoch]
+            )
+            mmd_loss, recon_loss, kl_loss, L1 = loss_function(
+                y_hat,
+                y,
+                x_recon,
+                x,
+                z_mu,
+                z_var,
+                G,
+                opts.MMD_sigma,
+                opts.kernel_num,
+                opts.matched_IO,
+            )
+            loss = (
+                alpha_schedule[epoch] * mmd_loss
+                + recon_loss
+                + beta_schedule[epoch] * kl_loss
+                + opts.lmbda * L1
+            )
             loss.backward()
+
             if opts.grad_clip:
-                for param in cmvae.parameters():
-                    print(param)
-                    if param.grad is not None:
-                        param.grad.data = param.grad.data.clamp(min=-0.5, max=0.5)
+                torch.nn.utils.clip_grad_value_(cmvae.parameters(), clip_value=0.5)
+
             optimizer.step()
 
-            #append
-            v = bc.argmax(axis=1)
-            for i,pert in enumerate(c.argmax(axis=1)):
-                dd[int(pert.__float__())].append(int(v[i].__float__()))
+            # Log batch losses
+            epoch_losses["loss"] += loss.item()
+            epoch_losses["mmd_loss"] += mmd_loss.item()
+            epoch_losses["recon_loss"] += recon_loss.item()
+            epoch_losses["kl_loss"] += kl_loss.item()
+            epoch_losses["l1_loss"] += L1.item()
 
-            ct += 1
-            lossAv += loss.detach().cpu().numpy()
-            mmdAv += mmd_loss.detach().cpu().numpy()
-            reconAv += recon_loss.detach().cpu().numpy()
-            klAv += kl_loss.detach().cpu().numpy()
-            L1Av += L1.detach().cpu().numpy()
+        # Log average epoch losses
+        for k in epoch_losses:
+            epoch_losses[k] /= len(dataloader)
 
-            if log:
-                wandb.log({'loss':loss})
-                wandb.log({'mmd_loss':mmd_loss})
-                wandb.log({'recon_loss':recon_loss})
-                wandb.log({'kl_loss':kl_loss})
-                wandb.log({'l1_loss': L1})
+        if opts.log:
+            mlflow.log_metrics(
+                {f"avg_{k}": v for k, v in epoch_losses.items()}, step=epoch
+            )
 
-        print('Epoch '+str(n)+': Loss='+str(lossAv/ct)+', '+'MMD='+str(mmdAv/ct)+', '+'MSE='+str(reconAv/ct)+', '+'KL='+str(klAv/ct)+', '+'L1='+str(L1Av/ct))
-        
-        if log:
-            wandb.log({'epoch avg loss': lossAv/ct})
-            wandb.log({'epoch avg mmd_loss': mmdAv/ct})
-            wandb.log({'epoch avg recon_loss': reconAv/ct})
-            wandb.log({'epoch avg kl_loss': klAv/ct})
-            wandb.log({'epoch avg l1_loss': L1/ct})
+        logger.info(
+            f"Epoch {epoch + 1}: Loss={epoch_losses['loss']:.6f}, MMD={epoch_losses['mmd_loss']:.6f}, Recon={epoch_losses['recon_loss']:.6f}, KL={epoch_losses['kl_loss']:.6f}, L1={epoch_losses['l1_loss']:.6f}"
+        )
 
-        if (mmdAv + reconAv + klAv + L1Av)/ct < min_train_loss:
-            min_train_loss = (mmdAv + reconAv + klAv + L1Av)/ct 
-            #best_model = deepcopy(cmvae)
-            torch.save(cmvae, os.path.join(savedir, 'best_model.pt'))
+        # Save the best model
+        current_loss = sum(epoch_losses.values()) / len(epoch_losses)
+        if current_loss < min_train_loss:
+            min_train_loss = current_loss
+            torch.save(cmvae, os.path.join(savedir, "best_model.pt"))
+            logger.info(f"Best model saved at epoch {epoch + 1}")
 
-        ## report
-        if mode[:4] == 'sena':
-            ttest_df = compute_activation_df(cmvae, adata, gos, scoretype = 'mu_diff', mode = mode, gene_go_dict= gene_go_dict, 
-                                            ensembl_genename_dict = ens_gene_dict, ptb_targets = ptb_targets_affected)
-            summary_analysis_ep = compute_outlier_activation_analysis(ttest_df, mode = mode)
-        else:
-            summary_analysis_ep = pd.DataFrame({'mode': mode}, index = [0])
-
-        summary_analysis_ep['epoch'] = n
-        summary_analysis_ep['mmd_loss'] = mmdAv/ct
-        summary_analysis_ep['recon_loss'] = reconAv/ct
-        summary_analysis_ep['kl_loss'] = klAv/ct
-        summary_analysis_ep['l1_loss'] = (L1/ct).__float__()
-
-        #add uniqueness score
-        kk = [np.argmax(np.bincount(dd[k])) for k in dd]
-        us = len(set(kk))/len(kk)
-        summary_analysis_ep['uniqueness_score_intervention'] = us
-        
-        #append
-        results.append(summary_analysis_ep)
-
-    results_df = pd.concat(results)
-    results_df.to_csv(os.path.join(savedir, f'uhler_{mode}_latdim_{opts.latdim}_summary.tsv'),sep='\t')
-    print(results_df)
-
-# loss function definition
-def loss_function(y_hat, y, x_recon, x, mu, var, G, MMD_sigma, kernel_num, matched_IO=False):
-
-    if not matched_IO:
-        matching_function_interv = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num) # MMD Distance since we don't have paired data
-    else:
-        matching_function_interv = nn.MSELoss() # MSE if there is matched interv/observ samples
-    matching_function_recon = nn.MSELoss() # reconstruction
-
-    if y_hat is None:
-        MMD = 0
-    else:
-        MMD = matching_function_interv(y_hat, y)
-        
-    MSE = matching_function_recon(x_recon, x)
-    logvar = torch.log(var)
-    KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    #KLD = torch.sum(KLD_element).mul_(-0.5)/x.shape[0]
-    KLD = torch.mean(KLD_element).mul_(-0.5)/x.shape[0]
-
-    if G is None:
-        L1 = 0
-    else:
-        #L1 = torch.norm(torch.triu(G,diagonal=1),1)  # L1 norm for sparse G
-        L1 = torch.norm(torch.triu(G,diagonal=1),1) / torch.sum(torch.triu(torch.ones_like(G), diagonal=1))
-
-    return MMD, MSE, KLD, L1
-
-
-
+    if opts.log:
+        logger.info("Wrapping up mlflow server")
+        mlflow.end_run()

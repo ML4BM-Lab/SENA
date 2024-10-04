@@ -1,84 +1,167 @@
-import os
 import argparse
-from argparse import Namespace
-import time
 import json
+import logging
+import os
 import pickle
-import torch
-import numpy as np
 import random
+from dataclasses import asdict, dataclass
+from typing import Any, Optional, Tuple
+
+import numpy as np
+import torch
 from train import train
-from utils import get_data
+from utils import Norman2019DataLoader
 
-def main(args):
-	print(f'using device: {args.device}')
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("training.log"),  # Logs to a file
+        logging.StreamHandler(),  # Also logs to the console
+    ],
+)
 
-	opts = Namespace(
-		batch_size = 32,
-		mode = 'train',
-		lr = 1e-3,
-		epochs = args.epochs,
-		grad_clip = False,
-		mxAlpha = 1,
-		mxBeta = 1,
-		mxTemp = 100,
-		lmbda = 0.1,
-		MMD_sigma = 200,
-		kernel_num = 10,
-		matched_IO = False,
-		latdim = args.latdim, #our assumption 16
-		seed = args.seed,
-		trainmode = args.trainmode
-	)
 
-	torch.manual_seed(opts.seed)
-	np.random.seed(opts.seed)
-	random.seed(opts.seed)
+@dataclass
+class Options:
+    batch_size: int = 32
+    model: str = "sena"
+    sena_lambda: float = 0
+    lr: float = 1e-3
+    epochs: int = 100
+    grad_clip: bool = False
+    mxAlpha: float = 1.0
+    mxBeta: float = 1.0
+    mxTemp: float = 100.0
+    lmbda: float = 0.1
+    MMD_sigma: float = 200.0
+    kernel_num: int = 10
+    matched_IO: bool = False
+    latdim: int = 105
+    seed: int = 42
+    dim: Optional[int] = None
+    cdim: Optional[int] = None
+    log: bool = True
+    mlflow_port: int = 5678
 
-	dataloader, dataloader2, dim, cdim, ptb_targets = get_data(mode=opts.mode, batch_size=opts.batch_size)
 
-	opts.dim = dim
-	if opts.latdim is None:
-		opts.latdim = cdim
-	opts.cdim = cdim
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Parse command line arguments.")
+    parser.add_argument(
+        "-s",
+        "--savedir",
+        type=str,
+        default="./results/",
+        help="Directory to save the results.",
+    )
+    parser.add_argument(
+        "--device", type=str, default="cuda:0", help="Device to run the training."
+    )
+    parser.add_argument(
+        "--model", type=str, default="sena", help="Model to use for training."
+    )
+    parser.add_argument("--name", type=str, default="example", help="Name of the run.")
+    parser.add_argument("--latdim", type=int, default=105, help="Latent dimension.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--epochs", type=int, default=100, help="Number of training epochs."
+    )
+    parser.add_argument("--sena_lambda", type=float, default=0, help="Sena λ value")
+    parser.add_argument(
+        "--log", type=bool, default=False, help="flow server log system"
+    )
+    return parser.parse_args()
 
-	with open(f'{args.savedir}/config.json', 'w') as f:
-		json.dump(opts.__dict__, f, indent=4)
 
-	with open(f'{args.savedir}/ptb_targets.pkl', 'wb') as f:
-		pickle.dump(ptb_targets, f, protocol=pickle.HIGHEST_PROTOCOL)
+def set_seeds(seed: int) -> None:
+    """Set random seeds for reproducibility."""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
-	with open(f'{args.savedir}/test_data_single_node.pkl', 'wb') as f:
-		pickle.dump(dataloader2, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-	with open(f'{args.savedir}/train_data.pkl', 'wb') as f:
-		pickle.dump(dataloader, f, protocol=pickle.HIGHEST_PROTOCOL)
+def save_config(opts: Options, save_dir: str) -> None:
+    """Save the configuration options to a JSON file."""
+    config_path = os.path.join(save_dir, "config.json")
+    with open(config_path, "w") as f:
+        json.dump(asdict(opts), f, indent=4)
 
-	if args.model == 'cmvae':
-		train(dataloader, opts, args.device, args.savedir, log=False)
 
-if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='parse args')
-	parser.add_argument('-s', '--savedir', type=str, default='./../../result/uhler/', help='directory to save the results')
-	parser.add_argument('--device', type=str, default='cuda:0', help='device to run the training')
-	parser.add_argument('--model', type=str, default='cmvae', help='model to run the training')
-	parser.add_argument('--name', type=str, default=f'full_go', help='name of the run')
-	parser.add_argument('--trainmode', type = str, default = 'regular')
-	parser.add_argument('--latdim', type = int, default = 70)
-	parser.add_argument('--seed', type = int, default = 42)
-	parser.add_argument('--epochs', type=int, default = 100)
-	args = parser.parse_args()
-	
-	#concat
-	args.name = f'{args.name}_{args.trainmode}'
+def save_pickle(data: Any, filepath: str) -> None:
+    """Save data to a pickle file."""
+    with open(filepath, "wb") as f:
+        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-	args.savedir = os.path.join(args.savedir, args.name)
-	if not os.path.exists(args.savedir):
-		os.makedirs(args.savedir)
 
-	#create folder for seed
-	args.savedir = os.path.join(args.savedir, f'seed_{args.seed}_latdim_{args.latdim}')
-	if not os.path.exists(args.savedir):
-		os.makedirs(args.savedir)
+def main(args: argparse.Namespace) -> None:
+    """Main training function."""
 
-	main(args)
+    # Create Options instance with arguments overriding defaults
+    opts = Options(
+        epochs=args.epochs,
+        latdim=args.latdim,
+        seed=args.seed,
+        model=args.model,
+        sena_lambda=args.sena_lambda,
+        name=args.name,
+    )
+
+    logging.info(f"Configuration: {opts}")
+
+    # Set random seeds
+    set_seeds(opts.seed)
+
+    logging.info("Loading data...")
+    data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
+
+    # Get data from single-gene perturbation
+    (
+        dataloader,
+        dataloader2,
+        dim,
+        cdim,
+        ptb_targets,
+    ) = data_handler.get_data(mode="train")
+
+    # Get data from double perturbation
+    dataloader_double, _, _, _ = data_handler.get_data(
+        mode="test", perturb_targets=ptb_targets
+    )
+
+    opts.dim = dim
+    opts.cdim = cdim
+
+    # Update latent dimension if not specified
+    if opts.latdim is None:
+        opts.latdim = opts.cdim
+
+    logging.info("Saving configuration dict...")
+
+    # Save configurations and data
+    save_config(opts, args.savedir)
+    save_pickle(ptb_targets, os.path.join(args.savedir, "ptb_targets.pkl"))
+    save_pickle(dataloader2, os.path.join(args.savedir, "test_data_single_node.pkl"))
+    save_pickle(dataloader, os.path.join(args.savedir, "train_data.pkl"))
+    save_pickle(dataloader_double, os.path.join(args.savedir, "double_data.pkl"))
+
+    # Train the model
+    train(
+        dataloader=dataloader,
+        opts=opts,
+        device=args.device,
+        savedir=args.savedir,
+        logger=logging,
+        data_handler=data_handler,
+    )
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    # Build the save directory path
+    args.savedir = os.path.join(args.savedir, args.name)
+    os.makedirs(args.savedir, exist_ok=True)
+
+    main(args)

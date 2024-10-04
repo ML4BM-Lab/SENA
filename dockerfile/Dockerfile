@@ -2,19 +2,25 @@ FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    git\
-    nano\
+    git \
+    nano \
     wget
 
-
+# Upgrade pip
 RUN pip install --upgrade pip
 
-RUN pip install matplotlib pandas networkx umap-learn seaborn
-RUN pip install datashader bokeh holoviews scikit-image colorcet
-RUN pip install rdkit-pypi
-RUN pip install torch_scatter torch_sparse torch_spline_conv -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-
+# Create and set the working directory
 RUN mkdir /wdir
 WORKDIR /wdir
+
+# Copy the requirements.txt file to the container
+COPY requirements.txt /wdir/requirements.txt
+
+# Install Python dependencies from requirements.txt
+RUN pip install -r /wdir/requirements.txt
+
+#Remove requirements
+RUN rm requirements.txt
