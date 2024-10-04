@@ -32,3 +32,5 @@ src/figures/
 src/encoder_vs_decoder/
 src/misc/
 src/uhler/wandb
+
+filtering/
