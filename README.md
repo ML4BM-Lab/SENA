@@ -123,7 +123,7 @@ The script accepts several command-line arguments to customize the training proc
 - `--batch_size` (int): Batch size for training. Default is set within the script (`32`), but can be modified.
 - `--lr` (float): Learning rate. Default is set within the script (`1e-3`), but can be modified.
 - `--sena_lambda` (float): Sena λ value. Default: `0`.
-- `--latdim` (int): Latent dimension size. Default: `105`. (equal to the number of perturbation knockout cells)
+- `--latdim` (int): Latent dimension size. Default: `105`. (equal to the number of perturbations/knockout types)
 - `--lr` (float): Learning rate. Default is set within the script (`1e-3`), but can be modified.
 - `--grad_clip` (bool): Whether to apply gradient clipping during training. Default is `False`.
 
