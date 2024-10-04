@@ -36,3 +36,4 @@ src/uhler/wandb
 filtering/
 anonymize.sh
 git-filter-repo.py
+anonymize_commits.py
