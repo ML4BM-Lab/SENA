@@ -34,3 +34,4 @@ src/misc/
 src/uhler/wandb
 
 filtering/
+anonymize.sh
