@@ -1,15 +1,8 @@
-datasets/*
-pretrained_models/*
 data/*
-theis_paper/*
 *.pyc
 *.png
 !imgs/model_overview.png
 *.pdf
-wandb/*
-crl/env1_exp/figs/*
-result/
-notebooks/
 logs/
 *.pyc
 *.wandb
