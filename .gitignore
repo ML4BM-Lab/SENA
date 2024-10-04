@@ -6,7 +6,6 @@ theis_paper/*
 *.png
 !imgs/model_overview.png
 *.pdf
-ksport/*
 wandb/*
 crl/env1_exp/figs/*
 result/
