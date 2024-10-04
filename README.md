@@ -111,7 +111,7 @@ The script accepts several command-line arguments to customize the training proc
 ### General Parameters
 
 - `-s`, `--savedir` (str): Directory to save the results. Default: `'./results/'`. (folder will be created automatically)
-- `--device` (str): Device to run the training on. Options include `'cpu'` or CUDA devices like `'cuda:0'`. Default: `'cuda:0'`.
+- `--device` (str): Device to run the training on (cpu or cuda). Default: `'cuda:0'`.
 - `--model` (str): Model to use for training, either `'sena'` or `'original'`  Default: `'sena'`.
 - `--name` (str): Name of the run, used for organizing output files. Default: `'example'`.
 - `--log` (bool): Whether to use a local mlflow server to visualize training. Default: False.
