@@ -35,3 +35,4 @@ src/uhler/wandb
 
 filtering/
 anonymize.sh
+git-filter-repo.py
