@@ -80,7 +80,7 @@ we provide in the data folder as a zip file.:
     # run creating a virtual link to your SENA folder.
     docker run -dt -v <your_path>/SENA:/wdir/ --gpus all --name <container_name> <image_name>
 
-    # access the docker
+    # access the docker (we will assume its called sena_vae)
     docker exec -it sena_vae bash
     ```
 
@@ -100,7 +100,7 @@ we provide in the data folder as a zip file.:
 5. Now you can run SENA-discrepancy-VAE by doing: 
 
     ```bash
-    python3 src/sena_discrepancy_vae/run.py
+    python3 src/sena_discrepancy_vae/main.py
     ```
 
 6. Finally, you can retrieve the metrics of the trained model:

@@ -15,19 +15,20 @@ python src/ablation_study/main.py --mode {ae|vae} --encoder_name {sena|mlp|l1} [
 
 - `--mode`: The mode of the model. Choose between 'ae' (autoencoder) or 'vae' (variational autoencoder). Default is `ae`.
 - `--encoder_name`: The encoder architecture. Options are 'sena', 'mlp', or 'l1'. Default is `sena`.
-- `--nseeds`: Number of random seeds to run. Default is 3.
-- `--batch_size`: Batch size for training. Default is 32.
+- `--nseeds`: Number of random seeds to run. Default is 5.
+- `--batch_size`: Batch size for training. Default is 128.
 - `--nlayers`: Number of layers in the model. Default is 1.
 - `--dataset`: Dataset to use. Default is `Norman2019_raw`.
-- `--num_gene_th`: Threshold for the number of genes in the Norman dataset. Default is 5.
+- `--num_gene_th`: Threshold for the minimum number of genes within each BP in the Norman dataset. Default is 5.
 - `--beta`: Beta parameter for the VAE model. Default is 1.0.
-- `--lambda_sena`: Regularization parameter for the Sena model. Default is 0.
+- `--lambda_sena`: λ parameter for the Sena model. Default is 0.
 - `--lambda_l1`: L1 regularization parameter. Default is 1e-5.
+- `--epochs`: Epochs for training. Default is 250.
 
 ### Example
 
 ```bash
-python src/ablation_study/main.py --mode vae --encoder_name sena --nseeds 5 --batch_size 64 --nlayers 3 --dataset Norman2019_raw
+python src/ablation_study/main.py --mode vae --encoder_name sena --nseeds 3 --nlayers 2 --dataset Norman2019_raw
 ```
 
 ### Output

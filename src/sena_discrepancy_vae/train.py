@@ -25,7 +25,7 @@ def train(
         mlflow.start_run()
         mlflow.log_params(asdict(opts))
 
-    logger.info(f"Started training with {opts.epochs} epochs on device: {device}")
+    logger.info(f"Started training on device: {device}")
 
     # Load dataset
     # adata, _, _, ptb_targets_affected, gos, rel_dict, gene_go_dict, ens_gene_dict = load_norman_2019_dataset()
