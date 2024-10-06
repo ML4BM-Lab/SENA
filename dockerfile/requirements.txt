@@ -1,0 +1,15 @@
+graphical_models==0.1a21
+matplotlib==3.5.2
+networkx==2.8.8
+numpy==1.22.4
+pandas==1.5.3
+scanpy==1.9.6
+scikit_learn==1.1.1
+scipy==1.8.1
+seaborn==0.11.2
+statannotations==0.6.0
+torch==1.13.0
+tqdm==4.64.1
+wandb==0.18.3
+mlflow==2.16.2
+mlflow-skinny==2.16.2

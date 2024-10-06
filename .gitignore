@@ -12,6 +12,7 @@ data/Norman2019_reduced.h5ad
 *.png
 
 dockerfile/docker_readme.md
+!dockerfile/requirements.txt
 .vscode/
 results/
 mlruns/
