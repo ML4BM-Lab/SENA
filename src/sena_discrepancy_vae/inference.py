@@ -9,17 +9,17 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from train import loss_function
-from utils import MMD_loss
+from utils import MMD_loss, LossFunction
 
 
 def evaluate_generated_samples(
     model: torch.nn.Module,
+    loss_f,
     dataloader: DataLoader,
     device: torch.device,
     temp: float,
     numint: int = 1,
-    mode: str = "CMVAE",
+    mode: str = "double",
     MMD_sigma: float = 200.0,
     kernel_num: int = 10,
 ) -> Tuple[float, float, float, float]:
@@ -78,17 +78,14 @@ def evaluate_generated_samples(
     G = model.G.cpu()
 
     # Compute metrics
-    _, MSE, KLD, L1 = loss_function(
+    _, MSE, KLD, L1 = loss_f.compute_loss(
         pred_y,
         gt_y,
         pred_x,
         gt_x,
         mu,
         var,
-        G,
-        MMD_sigma=MMD_sigma,
-        kernel_num=kernel_num,
-        matched_IO=True,
+        G
     )
 
     # Compute MMD by batches
@@ -109,9 +106,9 @@ def evaluate_generated_samples(
 
     return MMD, MSE.item(), KLD.item(), L1.item()
 
-
-def evaluate_single_leftout(
+def evaluate_model_generic(
     model: torch.nn.Module,
+    loss_f,
     savedir: str,
     device: torch.device,
     mode: str,
@@ -120,104 +117,62 @@ def evaluate_single_leftout(
     kernel_num: int = 10,
 ) -> Tuple[float, float, float, float]:
     """
-    Evaluate the model on the test data (single left-out).
+    Evaluate the model on the given data type (single left-out, single train, or double perturbation).
+
+    Args:
+        model (torch.nn.Module): The model to evaluate.
+        loss_f: Loss function class
+        savedir (str): Directory where the data files are stored.
+        device (torch.device): Device on which the model is run.
+        mode (str): Evaluation mode (e.g., 'test', 'train', etc.).
+        data_type (str): The type of data to evaluate ('single_leftout', 'single_train', 'double').
+        temp (float): Temperature value for evaluation.
+        MMD_sigma (float): Sigma value for MMD calculation.
+        kernel_num (int): Number of kernels for MMD.
 
     Returns:
-        MMD, MSE, KLD, L1
+        Tuple: MMD, MSE, KLD, L1 losses.
     """
-    data_path = os.path.join(savedir, "test_data_single_node.pkl")
+    # Define file paths based on data type
+    data_file_map = {
+        "train": "train_data.pkl",
+        "test": "test_data_single_node.pkl",
+        "double": "double_data.pkl",
+    }
+
+    if mode not in data_file_map:
+        raise ValueError(f"Invalid data type: {mode}. Expected 'train', 'test', or 'double'.")
+
+    # Construct the full path to the data file
+    data_path = os.path.join(savedir, data_file_map[mode])
+
+    # Load the data
     if os.path.exists(data_path):
         with open(data_path, "rb") as f:
             dataloader = pickle.load(f)
     else:
-        raise FileNotFoundError(f"Test data file not found at {data_path}")
+        raise FileNotFoundError(f"{mode} data file not found at {data_path}")
 
+    # Determine the number of interventions (numint) based on data type
+    numint = 1 if mode in ["train", "test"] else 2
+
+    # Evaluate the model using the loaded data
     return evaluate_generated_samples(
         model,
+        loss_f,
         dataloader,
         device,
         temp,
-        numint=1,
+        numint=numint,
         mode=mode,
         MMD_sigma=MMD_sigma,
         kernel_num=kernel_num,
     )
-
-
-def evaluate_single_train(
-    model: torch.nn.Module,
-    savedir: str,
-    device: torch.device,
-    mode: str,
-    temp: float = 1000.0,
-    MMD_sigma: float = 200.0,
-    kernel_num: int = 10,
-) -> Tuple[float, float, float, float]:
-    """
-    Evaluate the model on the training data.
-
-    Returns:
-        MMD, MSE, KLD, L1
-    """
-    data_path = os.path.join(savedir, "train_data.pkl")
-    if os.path.exists(data_path):
-        with open(data_path, "rb") as f:
-            dataloader = pickle.load(f)
-    else:
-        raise FileNotFoundError(f"Train data file not found at {data_path}")
-
-    return evaluate_generated_samples(
-        model,
-        dataloader,
-        device,
-        temp,
-        numint=1,
-        mode=mode,
-        MMD_sigma=MMD_sigma,
-        kernel_num=kernel_num,
-    )
-
-
-def evaluate_double(
-    model: torch.nn.Module,
-    savedir: str,
-    device: torch.device,
-    mode: str,
-    temp: float = 1000.0,
-    MMD_sigma: float = 200.0,
-    kernel_num: int = 10,
-) -> Tuple[float, float, float, float]:
-    """
-    Evaluate the model on the double perturbation data.
-
-    Returns:
-        MMD, MSE, KLD, L1
-    """
-    # Get data
-    double_data_path = os.path.join(savedir, "double_data.pkl")
-    if os.path.exists(double_data_path):
-        with open(double_data_path, "rb") as f:
-            dataloader = pickle.load(f)
-    else:
-        raise FileNotFoundError(
-            f"Double perfurbation data file not found at {double_data_path}"
-        )
-
-    return evaluate_generated_samples(
-        model,
-        dataloader,
-        device,
-        temp,
-        numint=2,
-        mode=mode,
-        MMD_sigma=MMD_sigma,
-        kernel_num=kernel_num,
-    )
-
 
 def evaluate_model(
     model: torch.nn.Module,
     mode: str,
+    loss_f,
     savedir: str,
     device: torch.device,
     temp: float,
@@ -233,56 +188,39 @@ def evaluate_model(
     Returns:
         pd.DataFrame: DataFrame containing the metrics.
     """
-    if mode == "test":
-        MMD, MSE, KLD, L1 = evaluate_single_leftout(
-            model,
-            savedir,
-            device,
-            mode,
-            temp=temp,
-            MMD_sigma=MMD_sigma,
-            kernel_num=kernel_num,
-        )
-    elif mode == "train":
-        MMD, MSE, KLD, L1 = evaluate_single_train(
-            model,
-            savedir,
-            device,
-            mode,
-            temp=temp,
-            MMD_sigma=MMD_sigma,
-            kernel_num=kernel_num,
-        )
-    elif mode == "double":
-        MMD, MSE, KLD, L1 = evaluate_double(
-            model,
-            savedir,
-            device,
-            mode,
-            temp=temp,
-            MMD_sigma=MMD_sigma,
-            kernel_num=kernel_num,
-        )
-    else:
+
+    if mode not in ['train','test','double']:
         raise ValueError(
             f"Invalid mode '{mode}'. Expected 'train', 'test', or 'double'."
         )
 
-    data = {"Metric": ["MMD", "MSE", "KLD", "L1"], "Values": [MMD, MSE, KLD, L1]}
+    #compute losses
+    MMD, MSE, KLD, L1 = evaluate_model_generic(
+        model,
+        loss_f,
+        savedir,
+        device,
+        mode,
+        temp=temp,
+        MMD_sigma=MMD_sigma,
+        kernel_num=kernel_num,
+    )
 
+    #build dataframe
+    data = {"Metric": ["MMD", "MSE", "KLD", "L1"], "Values": [MMD, MSE, KLD, L1]}
     df = pd.DataFrame(data)
+
     return df
 
-
 def compute_metrics(
-    savedir: str, evaluation_types: List[str] = ["double"]
+    savedir: str, evaluation: List[str] = ["double"]
 ) -> pd.DataFrame:
     """
     Compute metrics for a given model.
 
     Parameters:
         savedir (str): Path to the saved model and config files.
-        evaluation_types (list): list of folds to compute metrics for (['train','test','double'])
+        evaluation (list): list of folds to compute metrics for (['train','test','double'])
     Returns:
         pd.DataFrame: DataFrame containing the computed metrics.
     """
@@ -306,60 +244,39 @@ def compute_metrics(
     # Extract parameters from config
     MMD_sigma = config.get("MMD_sigma", 200.0)
     kernel_num = config.get("kernel_num", 10)
+    matched_IO = config.get("matched_IO", False)
     temp = config.get("temp", 1000.0)
     seed = config.get("seed", 42)
     latdim = config.get("latdim", 105)
     model_name = config.get("name", "example")
 
+    #init loss function class
+    loss_f = LossFunction(MMD_sigma=MMD_sigma, kernel_num=kernel_num, matched_IO=matched_IO)
+
     # Prepare device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # init empty
-    df_double, df_train, df_test = None, None, None
+    # init list
+    df_list = []
 
-    # Evaluate model
-    if "double" in evaluation_types:
-        print("Evaluating on double perturbation data...")
-        df_double = evaluate_model(
+    for mode in evaluation:
+        print(f"Evaluating on {mode} data...")
+        df = evaluate_model(
             model=model,
-            mode="double",
+            mode=mode,
+            loss_f=loss_f,
             savedir=savedir,
             device=device,
             temp=temp,
             MMD_sigma=MMD_sigma,
             kernel_num=kernel_num,
         )
-        df_double["mode"] = "double"
-
-    if "train" in evaluation_types:
-        print("Evaluating on training data...")
-        df_train = evaluate_model(
-            model=model,
-            mode="train",
-            savedir=savedir,
-            device=device,
-            temp=temp,
-            MMD_sigma=MMD_sigma,
-            kernel_num=kernel_num,
-        )
-        df_train["mode"] = "train"
-
-    if "test" in evaluation_types:
-        print("Evaluating on test data...")
-        df_test = evaluate_model(
-            model=model,
-            mode="test",
-            savedir=savedir,
-            device=device,
-            temp=temp,
-            MMD_sigma=MMD_sigma,
-            kernel_num=kernel_num,
-        )
-        df_test["mode"] = "test"
+        df["mode"] = mode  # Add the mode as a column to the DataFrame
+        df_list.append(df)  # Append the results to the list
 
     # Collect results
-    df = pd.concat([df_double, df_train, df_test]).reset_index(drop=True)
+    df = pd.concat(df_list).reset_index(drop=True)
     df["seed"] = seed
     df["latdim"] = latdim
     df["model_name"] = model_name
@@ -382,7 +299,7 @@ if __name__ == "__main__":
         help="Path to the saved model and config files.",
     )
     parser.add_argument(
-        "--evaluation_types",
+        "--evaluation",
         nargs="+",
         default=["double"],
         help="Which folds to evaluate (train, test and/or double)",
@@ -390,5 +307,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     metrics_df = compute_metrics(
-        savedir=args.savedir, evaluation_types=args.evaluation_types
+        savedir=args.savedir, evaluation=args.evaluation
     )

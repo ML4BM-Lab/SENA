@@ -25,8 +25,10 @@ logging.basicConfig(
 
 @dataclass
 class Options:
-    batch_size: int = 32
+    name: str = "example"
     model: str = "sena"
+    dataset_name: str = "Norman2019_raw"
+    batch_size: int = 32
     sena_lambda: float = 0
     lr: float = 1e-3
     epochs: int = 100
@@ -42,7 +44,7 @@ class Options:
     seed: int = 42
     dim: Optional[int] = None
     cdim: Optional[int] = None
-    log: bool = True
+    log: bool = False
     mlflow_port: int = 5678
 
 
@@ -63,6 +65,8 @@ def parse_args() -> argparse.Namespace:
         "--model", type=str, default="sena", help="Model to use for training."
     )
     parser.add_argument("--name", type=str, default="example", help="Name of the run.")
+    parser.add_argument("--dataset", type=str, default="Norman2019_raw", help="Name of the run.")
+
     parser.add_argument("--latdim", type=int, default=105, help="Latent dimension.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument(
@@ -70,7 +74,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--sena_lambda", type=float, default=0, help="Sena λ value")
     parser.add_argument(
-        "--log", type=bool, default=False, help="flow server log system"
+        "--log", action='store_true', help="flow server log system"
     )
     return parser.parse_args()
 
@@ -106,6 +110,7 @@ def main(args: argparse.Namespace) -> None:
         model=args.model,
         sena_lambda=args.sena_lambda,
         name=args.name,
+        dataset_name=args.dataset
     )
 
     logging.info(f"Configuration: {opts}")
@@ -114,7 +119,7 @@ def main(args: argparse.Namespace) -> None:
     set_seeds(opts.seed)
 
     logging.info("Loading data...")
-    data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
+    data_handler = Norman2019DataLoader(batch_size=opts.batch_size, dataname=opts.dataset_name)
 
     # Get data from single-gene perturbation
     (

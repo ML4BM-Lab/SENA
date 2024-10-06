@@ -13,11 +13,11 @@ from torch.utils.data.sampler import Sampler
 
 class Norman2019DataLoader:
     def __init__(
-        self, num_gene_th=5, batch_size=32, datafile="./data/Norman2019_raw.h5ad"
+        self, num_gene_th=5, batch_size=32, dataname="Norman2019_raw"
     ):
         self.num_gene_th = num_gene_th
         self.batch_size = batch_size
-        self.datafile = datafile
+        self.datafile = os.path.join('data',f"{dataname}.h5ad")
 
         # Initialize variables
         self.adata = None
@@ -175,7 +175,7 @@ class Norman2019DataLoader:
         assert mode in ["train", "test"], "mode not supported!"
 
         if mode == "train":
-            dataset = self.SCDataset(
+            dataset = SCDataset(
                 adata=self.adata,
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
@@ -205,7 +205,7 @@ class Norman2019DataLoader:
             ptb_name = dataset.ptb_names[train_idx]
             dataloader = DataLoader(
                 dataset1,
-                batch_sampler=self.SCDATA_sampler(dataset1, self.batch_size, ptb_name),
+                batch_sampler=SCDATA_sampler(dataset1, self.batch_size, ptb_name),
                 num_workers=0,
             )
 
@@ -216,7 +216,7 @@ class Norman2019DataLoader:
             ptb_name = dataset.ptb_names[test_idx]
             dataloader2 = DataLoader(
                 dataset2,
-                batch_sampler=self.SCDATA_sampler(dataset2, 8, ptb_name),
+                batch_sampler=SCDATA_sampler(dataset2, 8, ptb_name),
                 num_workers=0,
             )
 
@@ -226,7 +226,7 @@ class Norman2019DataLoader:
             assert (
                 perturb_targets is not None
             ), "perturb_targets has to be specified during testing!"
-            dataset = self.SCDataset(
+            dataset = SCDataset(
                 adata=self.adata,
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
@@ -237,7 +237,7 @@ class Norman2019DataLoader:
 
             dataloader = DataLoader(
                 dataset,
-                batch_sampler=self.SCDATA_sampler(dataset, self.batch_size),
+                batch_sampler=SCDATA_sampler(dataset, self.batch_size),
                 num_workers=0,
             )
 
@@ -256,118 +256,118 @@ class Norman2019DataLoader:
         train_idx = np.array([l for l in range(len(scdataset)) if l not in test_idx])
         return train_idx, test_idx
 
-    class SCDataset(Dataset):
-        def __init__(
-            self,
-            adata,
-            double_adata,
-            ptb_targets,
-            perturb_type="single",
-            perturb_targets=None,
-        ):
-            super().__init__()
-            assert perturb_type in ["single", "double"], "perturb_type not supported!"
+class SCDataset(Dataset):
+    def __init__(
+        self,
+        adata,
+        double_adata,
+        ptb_targets,
+        perturb_type="single",
+        perturb_targets=None,
+    ):
+        super().__init__()
+        assert perturb_type in ["single", "double"], "perturb_type not supported!"
 
-            self.genes = adata.var.index.tolist()
-            self.ptb_targets = ptb_targets
+        self.genes = adata.var.index.tolist()
+        self.ptb_targets = ptb_targets
 
-            if perturb_type == "single":
-                ptb_adata = adata[
-                    (~adata.obs["guide_ids"].str.contains(","))
-                    & (adata.obs["guide_ids"] != "")
-                ].copy()
+        if perturb_type == "single":
+            ptb_adata = adata[
+                (~adata.obs["guide_ids"].str.contains(","))
+                & (adata.obs["guide_ids"] != "")
+            ].copy()
 
-                # Keep only cells containing perturbed genes
-                ptb_adata = ptb_adata[ptb_adata.obs["guide_ids"].isin(ptb_targets), :]
+            # Keep only cells containing perturbed genes
+            ptb_adata = ptb_adata[ptb_adata.obs["guide_ids"].isin(ptb_targets), :]
 
-                self.ptb_samples = ptb_adata.X
-                self.ptb_names = ptb_adata.obs["guide_ids"].values
-                self.ptb_ids = self.map_ptb_features(
-                    self.ptb_targets, ptb_adata.obs["guide_ids"].values
-                )
+            self.ptb_samples = ptb_adata.X
+            self.ptb_names = ptb_adata.obs["guide_ids"].values
+            self.ptb_ids = self.map_ptb_features(
+                self.ptb_targets, ptb_adata.obs["guide_ids"].values
+            )
 
-            elif perturb_type == "double":
-                ptb_adata = double_adata[
-                    (double_adata.obs["guide_ids"].str.contains(","))
-                    & (double_adata.obs["guide_ids"] != "")
-                ].copy()
+        elif perturb_type == "double":
+            ptb_adata = double_adata[
+                (double_adata.obs["guide_ids"].str.contains(","))
+                & (double_adata.obs["guide_ids"] != "")
+            ].copy()
 
-                # Keep only cells containing perturbed genes
-                ptb_adata = ptb_adata[
-                    ptb_adata.obs["guide_ids"].apply(
-                        lambda x: all([y in ptb_targets for y in x.split(",")])
-                    ),
-                    :,
-                ]
-
-                self.ptb_samples = ptb_adata.X
-                self.ptb_names = ptb_adata.obs["guide_ids"].values
-                self.ptb_ids = self.map_ptb_features(
-                    self.ptb_targets, ptb_adata.obs["guide_ids"].values
-                )
-
-            self.ctrl_samples = adata[adata.obs["guide_ids"] == ""].X.copy()
-            self.rand_ctrl_samples = self.ctrl_samples[
-                np.random.choice(
-                    self.ctrl_samples.shape[0], self.ptb_samples.shape[0], replace=True
-                )
+            # Keep only cells containing perturbed genes
+            ptb_adata = ptb_adata[
+                ptb_adata.obs["guide_ids"].apply(
+                    lambda x: all([y in ptb_targets for y in x.split(",")])
+                ),
+                :,
             ]
 
-        def __getitem__(self, item):
-            x = torch.from_numpy(
-                self.rand_ctrl_samples[item].toarray().flatten()
-            ).double()
-            y = torch.from_numpy(self.ptb_samples[item].toarray().flatten()).double()
-            c = torch.from_numpy(self.ptb_ids[item]).double()
-            return x, y, c
+            self.ptb_samples = ptb_adata.X
+            self.ptb_names = ptb_adata.obs["guide_ids"].values
+            self.ptb_ids = self.map_ptb_features(
+                self.ptb_targets, ptb_adata.obs["guide_ids"].values
+            )
 
-        def __len__(self):
-            return self.ptb_samples.shape[0]
+        self.ctrl_samples = adata[adata.obs["guide_ids"] == ""].X.copy()
+        self.rand_ctrl_samples = self.ctrl_samples[
+            np.random.choice(
+                self.ctrl_samples.shape[0], self.ptb_samples.shape[0], replace=True
+            )
+        ]
 
-        def map_ptb_features(self, all_ptb_targets, ptb_ids):
-            ptb_features = []
-            for id in ptb_ids:
-                feature = np.zeros(len(all_ptb_targets))
-                feature[[all_ptb_targets.index(i) for i in id.split(",")]] = 1
-                ptb_features.append(feature)
-            return np.vstack(ptb_features)
+    def __getitem__(self, item):
+        x = torch.from_numpy(
+            self.rand_ctrl_samples[item].toarray().flatten()
+        ).double()
+        y = torch.from_numpy(self.ptb_samples[item].toarray().flatten()).double()
+        c = torch.from_numpy(self.ptb_ids[item]).double()
+        return x, y, c
 
-    class SCDATA_sampler(Sampler):
-        def __init__(self, scdataset, batchsize, ptb_name=None):
-            self.intervindices = []
-            self.len = 0
-            if ptb_name is None:
-                ptb_name = scdataset.ptb_names
-            for ptb in set(ptb_name):
-                idx = np.where(ptb_name == ptb)[0]
-                self.intervindices.append(idx)
-                self.len += len(idx) // batchsize
-            self.batchsize = batchsize
+    def __len__(self):
+        return self.ptb_samples.shape[0]
 
-        def __iter__(self):
-            comb = []
-            for indices in self.intervindices:
-                random.shuffle(indices)
-                interv_batches = self.chunk(indices, self.batchsize)
-                if interv_batches:
-                    comb += interv_batches
+    def map_ptb_features(self, all_ptb_targets, ptb_ids):
+        ptb_features = []
+        for id in ptb_ids:
+            feature = np.zeros(len(all_ptb_targets))
+            feature[[all_ptb_targets.index(i) for i in id.split(",")]] = 1
+            ptb_features.append(feature)
+        return np.vstack(ptb_features)
 
-            combined = [batch.tolist() for batch in comb]
-            random.shuffle(combined)
-            return iter(combined)
+class SCDATA_sampler(Sampler):
+    def __init__(self, scdataset, batchsize, ptb_name=None):
+        self.intervindices = []
+        self.len = 0
+        if ptb_name is None:
+            ptb_name = scdataset.ptb_names
+        for ptb in set(ptb_name):
+            idx = np.where(ptb_name == ptb)[0]
+            self.intervindices.append(idx)
+            self.len += len(idx) // batchsize
+        self.batchsize = batchsize
 
-        def __len__(self):
-            return self.len
+    def __iter__(self):
+        comb = []
+        for indices in self.intervindices:
+            random.shuffle(indices)
+            interv_batches = self.chunk(indices, self.batchsize)
+            if interv_batches:
+                comb += interv_batches
 
-        @staticmethod
-        def chunk(indices, chunk_size):
-            split = torch.split(torch.tensor(indices), chunk_size)
-            if len(indices) % chunk_size == 0:
-                return split
-            elif len(split) > 0:
-                return split[:-1]
-            else:
-                return []
+        combined = [batch.tolist() for batch in comb]
+        random.shuffle(combined)
+        return iter(combined)
+
+    def __len__(self):
+        return self.len
+
+    @staticmethod
+    def chunk(indices, chunk_size):
+        split = torch.split(torch.tensor(indices), chunk_size)
+        if len(indices) % chunk_size == 0:
+            return split
+        elif len(split) > 0:
+            return split[:-1]
+        else:
+            return []
 
 
 """MMD LOSS"""
@@ -421,55 +421,74 @@ class MMD_loss(nn.Module):
         loss = torch.mean(XX + YY - XY - YX)
         return loss
 
+# Assuming MMD_loss is defined elsewhere
+class LossFunction:
+    def __init__(self, MMD_sigma: float, kernel_num: int, matched_IO: bool = False):
+        """
+        Initializes the LossFunction class with required parameters.
 
-# Loss function definition
-def loss_function(
-    y_hat: torch.Tensor,
-    y: torch.Tensor,
-    x_recon: torch.Tensor,
-    x: torch.Tensor,
-    mu: torch.Tensor,
-    var: torch.Tensor,
-    G: Optional[torch.Tensor],
-    MMD_sigma: float,
-    kernel_num: int,
-    matched_IO: bool = False,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Computes the losses: MMD, MSE, KL-divergence, and L1 regularization.
+        Args:
+            MMD_sigma (float): Sigma value for MMD kernel.
+            kernel_num (int): Number of kernels for MMD.
+            matched_IO (bool): Whether matched input/output pairs are used.
+        """
+        self.MMD_sigma = MMD_sigma
+        self.kernel_num = kernel_num
+        self.matched_IO = matched_IO
+        self.mse_loss_fn = nn.MSELoss()
 
-    Args:
-        y_hat (torch.Tensor): Predicted output.
-        y (torch.Tensor): True output.
-        x_recon (torch.Tensor): Reconstructed input.
-        x (torch.Tensor): True input.
-        mu (torch.Tensor): Latent mean.
-        var (torch.Tensor): Latent variance.
-        G (torch.Tensor): Optional adjacency matrix for graph regularization.
-        MMD_sigma (float): MMD kernel sigma value.
-        kernel_num (int): Number of kernels for MMD.
-        matched_IO (bool): Whether matched input/output pairs are used.
+    def compute_loss(
+        self,
+        y_hat: torch.Tensor,
+        y: torch.Tensor,
+        x_recon: torch.Tensor,
+        x: torch.Tensor,
+        mu: torch.Tensor,
+        var: torch.Tensor,
+        G: Optional[torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Computes the losses: MMD, MSE, KL-divergence, and L1 regularization.
 
-    Returns:
-        Tuple: MMD loss, MSE loss, KL-divergence, L1 loss.
-    """
-    matching_function_interv = (
-        MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
-        if not matched_IO
-        else nn.MSELoss()
-    )
-    matching_function_recon = nn.MSELoss()
+        Args:
+            y_hat (torch.Tensor): Predicted output.
+            y (torch.Tensor): True output.
+            x_recon (torch.Tensor): Reconstructed input.
+            x (torch.Tensor): True input.
+            mu (torch.Tensor): Latent mean.
+            var (torch.Tensor): Latent variance.
+            G (torch.Tensor): Optional adjacency matrix for graph regularization.
 
-    MMD = 0 if y_hat is None else matching_function_interv(y_hat, y)
-    MSE = matching_function_recon(x_recon, x)
-    logvar = torch.log(var)
-    KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    KLD = torch.mean(KLD_element).mul_(-0.5) / x.shape[0]
-    L1 = (
-        torch.norm(torch.triu(G, diagonal=1), p=1)
-        / torch.sum(torch.triu(torch.ones_like(G), diagonal=1))
-        if G is not None
-        else torch.tensor(0.0)
-    )
+        Returns:
+            Tuple: MMD loss, MSE loss, KL-divergence, L1 loss.
+        """
+        # Choose the appropriate matching function based on matched_IO
+        matching_function_interv = (
+            MMD_loss(fix_sigma=self.MMD_sigma, kernel_num=self.kernel_num)
+            if not self.matched_IO
+            else self.mse_loss_fn
+        )
 
-    return MMD, MSE, KLD, L1
+        # Reconstruction loss using MSE
+        matching_function_recon = self.mse_loss_fn
+
+        # MMD loss (or MSE if matched_IO is True)
+        MMD = 0 if y_hat is None else matching_function_interv(y_hat, y)
+        
+        # Mean Squared Error (MSE) loss
+        MSE = matching_function_recon(x_recon, x)
+
+        # KL-Divergence (KLD) loss
+        logvar = torch.log(var)
+        KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
+        KLD = torch.mean(KLD_element).mul_(-0.5) / x.shape[0]
+
+        # L1 Regularization (only if adjacency matrix G is provided)
+        L1 = (
+            torch.norm(torch.triu(G, diagonal=1), p=1)
+            / torch.sum(torch.triu(torch.ones_like(G), diagonal=1))
+            if G is not None
+            else torch.tensor(0.0)
+        )
+
+        return MMD, MSE, KLD, L1

@@ -64,6 +64,14 @@ we provide in the data folder as a zip file.:
     rm cpa_binaries.tar
     ```
 
+    Alternatively, we have generated a reduced version of this dataset, which you can find as a .zip file in the data folder.
+    This will be the datased used by default.
+
+    ```bash
+    #this will generate a Norman2019_reduced.h5ad file
+    unzip Norman2019_reduced.zip
+    ```
+
 3. This project runs in a docker container. Run this code to build the image and to run the container
 
     ```bash
@@ -113,6 +121,7 @@ The script accepts several command-line arguments to customize the training proc
 - `-s`, `--savedir` (str): Directory to save the results. Default: `'./results/'`. (folder will be created automatically)
 - `--device` (str): Device to run the training on (cpu or cuda). Default: `'cuda:0'`.
 - `--model` (str): Model to use for training, either `'sena'` or `'original'`  Default: `'sena'`.
+-  `--dataset` (str): Name of the dataset used. Default: `'Norman2019_reduced'`.
 - `--name` (str): Name of the run, used for organizing output files. Default: `'example'`.
 - `--log` (bool): Whether to use a local mlflow server to visualize training. Default: False.
 - `--seed` (int): Random seed for reproducibility. Default: `42`.

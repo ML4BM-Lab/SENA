@@ -1,14 +1,13 @@
 import os
 from collections import defaultdict
 from dataclasses import asdict
-
-import mlflow
 import model as mod
 import numpy as np
 import torch
 from torch.optim import Adam
 from tqdm import tqdm
-from utils import loss_function
+from utils import LossFunction
+import mlflow
 
 
 # Train CMVAE to data
@@ -69,6 +68,9 @@ def train(
 
     min_train_loss = np.inf
 
+    #init loss function class
+    loss_f = LossFunction(MMD_sigma=opts.MMD_sigma, kernel_num=opts.kernel_num, matched_IO=opts.matched_IO)
+
     # Training loop
     for epoch in range(opts.epochs):
         epoch_losses = defaultdict(float)
@@ -84,17 +86,14 @@ def train(
             y_hat, x_recon, z_mu, z_var, G, bc = cmvae(
                 x, c, c, num_interv=1, temp=temp_schedule[epoch]
             )
-            mmd_loss, recon_loss, kl_loss, L1 = loss_function(
+            mmd_loss, recon_loss, kl_loss, L1 = loss_f.compute_loss(
                 y_hat,
                 y,
                 x_recon,
                 x,
                 z_mu,
                 z_var,
-                G,
-                opts.MMD_sigma,
-                opts.kernel_num,
-                opts.matched_IO,
+                G
             )
             loss = (
                 alpha_schedule[epoch] * mmd_loss
@@ -126,7 +125,7 @@ def train(
             )
 
         logger.info(
-            f"Epoch {epoch + 1}: Loss={epoch_losses['loss']:.6f}, MMD={epoch_losses['mmd_loss']:.6f}, Recon={epoch_losses['recon_loss']:.6f}, KL={epoch_losses['kl_loss']:.6f}, L1={epoch_losses['l1_loss']:.6f}"
+            f"Epoch {epoch + 1}: Loss={epoch_losses['loss']:.6f}, MMD={epoch_losses['mmd_loss']:.6f}, MSE={epoch_losses['recon_loss']:.6f}, KL={epoch_losses['kl_loss']:.6f}, L1={epoch_losses['l1_loss']:.6f}"
         )
 
         # Save the best model

@@ -10,7 +10,7 @@ from torch.nn import functional as F
 importlib.reload(ut)
 
 
-class NetActivity_layer(torch.nn.Module):
+class NetworkActivity_layer(torch.nn.Module):
 
     def __init__(
         self,
@@ -20,7 +20,7 @@ class NetActivity_layer(torch.nn.Module):
         bias=True,
         device=None,
         dtype=None,
-        sp=0,
+        lambda_parameter=0,
     ):
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
@@ -36,8 +36,9 @@ class NetActivity_layer(torch.nn.Module):
             for latent_go in self.relation_dict[i]:
                 mask[i, latent_go] = 1
 
+        #include λ
         self.mask = mask
-        self.mask[self.mask == 0] = sp
+        self.mask[self.mask == 0] = lambda_parameter
 
         # apply sp
         self.weight = nn.Parameter(
@@ -104,8 +105,8 @@ class CMVAE(nn.Module):
         elif mode == "sena":
 
             # connect initial gene space to gene sets
-            self.fc1 = NetActivity_layer(
-                self.dim, len(gos), rel_dict, device=device, sp=sena_lambda
+            self.fc1 = NetworkActivity_layer(
+                self.dim, len(gos), rel_dict, device=device, lambda_parameter=sena_lambda
             )
 
         # mean and var
