@@ -87,8 +87,7 @@ we provide in the data folder as a zip file.:
     docker exec -it sena_vae bash
 
     # start the server
-    mlflow ui 
-    --host 0.0.0.0 --port 5678
+    mlflow ui --host 0.0.0.0 --port 5678
 
     ```
 
