@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--beta", type=float, default=1.0, help="Beta parameter for VAE")
     parser.add_argument("--lambda_sena", type=float, default=0, help="Sena λ value")
     parser.add_argument("--lambda_l1", type=float, default=1e-5, help="L1 λ value")
+    parser.add_argument("--epochs", type=int, default=250, help="Epochs")
     args = parser.parse_args()
     logging.info(f"Parsed arguments: {args}")
 
@@ -52,6 +53,7 @@ def main():
 
     # Run evaluator for each seed
     all_results: List[pd.DataFrame] = []
+    logging.info("CUDA available, using GPU" if torch.cuda.is_available() else "CUDA not available, using CPU")
 
     for seed in range(args.nseeds):
         logging.info(f"Running evaluation for seed {seed}")
@@ -99,7 +101,7 @@ def main():
 
         # Set up evaluator
         logging.info(f"Setting up evaluator with beta={args.beta}")
-        evaluator = Evaluator(beta=args.beta)
+        evaluator = Evaluator(beta = args.beta, epochs = args.epochs, logging = logging)
 
         # Run evaluation
         logging.info(f"Starting evaluation for seed {seed}")

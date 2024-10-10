@@ -65,11 +65,18 @@ class Evaluator:
         self,
         beta: float = 1.0,
         device: Optional[torch.device] = None,
+        logging = None,
+        epochs = None,
+        report_epoch = 50,
     ):
         self.beta = beta
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.optimizer: optim.Optimizer = None
         self.model: nn.Module = None
+        self.logging = logging
+        self.epochs = epochs
+        self.report_epoch = report_epoch
+
 
     def initialize_optimizer(self) -> None:
         """Initializes the optimizer."""
@@ -143,9 +150,7 @@ class Evaluator:
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-        epochs, report_epoch = 250, 50
-
-        for epoch in tqdm(range(epochs), desc = 'Training'):
+        for epoch in tqdm(range(self.epochs), desc = 'Training'):
             self.model.train()
             epoch_losses = []
 
@@ -159,7 +164,7 @@ class Evaluator:
                 epoch_losses.append(loss.item())
 
             # Evaluation and metrics
-            if epoch % report_epoch == 0:
+            if epoch % self.report_epoch == 0:
                 metrics = self.evaluate(test_data)
                 metrics.update({
                     'epoch': epoch,
@@ -170,7 +175,7 @@ class Evaluator:
                 results.append(metrics)
 
                 # Print progress
-                print(f"Epoch {epoch+1}/{epochs}, Train Loss: {metrics['train_loss']:.4f}, Test Loss: {metrics['test_loss']:.4f}")
+                self.logging.info(f"Epoch {epoch+1}/{self.epochs}, Train Loss: {metrics['train_loss']:.4f}, Test Loss: {metrics['test_loss']:.4f}")
 
         # Compile results into DataFrame
         results_df = pd.DataFrame(results)

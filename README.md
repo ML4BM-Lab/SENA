@@ -3,8 +3,7 @@
 
 ## Overview
 
-SENA-discrepancy-VAE is a **Causal Representation Learning (CRL)** model designed to predict the impact of genomic and drug perturbations on cellular function by mapping biological processes to latent causal factors. The model improves interpretability by leveraging biological processes (BPs) as prior knowledge, allowing the prediction of unseen perturbations while inferring biologically meaningful causal factors. This method extends the discrepancy-vae (https://github.com/uhlerlab/discrepancy_vae), 
-which publication you can find here (https://openreview.net/pdf?id=o16sYKHk3S).
+SENA-discrepancy-VAE is a **Causal Representation Learning (CRL)** model designed to predict the impact of genomic and drug perturbations on cellular function by mapping biological processes to latent causal factors. The model improves interpretability by leveraging biological processes (BPs) as prior knowledge, allowing the prediction of unseen perturbations while inferring biologically meaningful causal factors. This method extends the discrepancy-vae (https://github.com/uhlerlab/discrepancy_vae).
 
 
 <img src="imgs/model_overview.png" alt="Model overview" style="max-width:100%;">
@@ -30,20 +29,6 @@ on unseen combinations of interventions that are comparable with its original, n
 counterpart, while inferring causal latent factors that are biologically meaningful.
 </div>
 
-
-### Key Features
-- **Interpretability:** Latent factors represent a linear combination of biological processes' activity levels.
-- **Prediction of unseen perturbations:** Comparable performance to non-interpretable models.
-- **Integration of prior biological knowledge**: Employs biological processes (BPs) as prior knowledge to map causal factors.
-
-## Architecture
-
-The SENA-discrepancy-VAE modifies the encoder architecture of the standard discrepancy-VAE by introducing a **SENA-δ encoder**. This encoder is biologically driven, incorporating BPs as masks that guide the mapping from gene expressions to causal factors.
-
-- **SENA Layer:** Summarizes gene expression data to infer BP activity levels.
-- **Two-Layer Encoder:** The second layer combines BP activity levels to produce latent factors used in the VAE framework.
-
-For more details on the architecture and methodology, refer to our paper.
 
 ## Usage
 
@@ -88,7 +73,7 @@ we provide in the data folder as a zip file.:
     # run creating a virtual link to your SENA folder.
     docker run -dt -v .:/wdir/ --gpus all --name <container_name> <image_name>
 
-    # access the docker
+    # access the docker (we will assume its called sena_vae)
     docker exec -it sena_vae bash
     ```
 
@@ -113,7 +98,7 @@ we provide in the data folder as a zip file.:
 5. Now you can run SENA-discrepancy-VAE by doing: 
 
     ```bash
-    python3 src/sena_discrepancy_vae/run.py
+    python3 src/sena_discrepancy_vae/main.py
     ```
 
 6. Finally, you can retrieve the metrics of the trained model:
@@ -148,21 +133,11 @@ The script accepts several command-line arguments to customize the training proc
 - `--lr` (float): Learning rate. Default is set within the script (`1e-3`), but can be modified.
 - `--grad_clip` (bool): Whether to apply gradient clipping during training. Default is `False`.
 
-### Advanced Model Parameters
 
-These parameters are set within the script but can be modified for advanced configurations:
+## Ablation study
 
-- `mxAlpha` (float): Hyperparameter alpha for the model. Default: `1.0`.
-- `mxBeta` (float): Hyperparameter beta for the model. Default: `1.0`.
-- `mxTemp` (float): Hyperparameter temperature for the model. Default: `100.0`.
-- `lmbda` (float): Regularization parameter lambda. Default: `0.1`.
-- `MMD_sigma` (float): Sigma value for the Maximum Mean Discrepancy (MMD) kernel. Default: `200.0`.
-- `kernel_num` (int): Number of kernels for MMD computation. Default: `10`.
-- `matched_IO` (bool): Whether to use matched input/output pairs. Default: `False`.
-- `--grad_clip` (bool): Whether to apply gradient clipping during training. Default is `False`.
+Refer to `README_ablation.md` in the `src` folder.
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-## Cite
