@@ -22,6 +22,7 @@ def evaluate_generated_samples(
     mode: str = "double",
     MMD_sigma: float = 200.0,
     kernel_num: int = 10,
+    batch_size: int = 10,
 ) -> Tuple[float, float, float, float]:
     """
     Evaluate the model on the given dataloader and compute metrics.
@@ -38,8 +39,12 @@ def evaluate_generated_samples(
     pred_x_list, gt_x_list = [], []
     gt_y_list, pred_y_list = [], []
     c_y_list, mu_list, var_list = [], [], []
+    MSE_l, KLD_l, L1_l, MMD_l = [], [], [], []
+    
+    #Initialize MMD loss
+    mmd_loss_func = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
 
-    for X in tqdm(dataloader, desc="evaluating loader"):
+    for i, X in enumerate(tqdm(dataloader, desc="evaluating loader")):
 
         x, y, c = X[0].to(device), X[1], X[2].to(device)
 
@@ -67,44 +72,44 @@ def evaluate_generated_samples(
         mu_list.append(z_mu.cpu())
         var_list.append(z_var.cpu())
 
-    # Stack tensors
-    gt_x = torch.vstack(gt_x_list)
-    pred_x = torch.vstack(pred_x_list)
-    gt_y = torch.vstack(gt_y_list)
-    pred_y = torch.vstack(pred_y_list)
-    c_y = torch.vstack(c_y_list)
-    mu = torch.vstack(mu_list)
-    var = torch.vstack(var_list)
-    G = model.G.cpu()
+        if not i % batch_size:
 
-    # Compute metrics
-    _, MSE, KLD, L1 = loss_f.compute_loss(
-        pred_y,
-        gt_y,
-        pred_x,
-        gt_x,
-        mu,
-        var,
-        G
-    )
+            # Stack tensors
+            gt_x = torch.vstack(gt_x_list)
+            pred_x = torch.vstack(pred_x_list)
+            gt_y = torch.vstack(gt_y_list)
+            pred_y = torch.vstack(pred_y_list)
+            c_y = torch.vstack(c_y_list)
+            mu = torch.vstack(mu_list)
+            var = torch.vstack(var_list)
+            G = model.G.cpu()
 
-    # Compute MMD by batches
-    mmd_loss_func = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
-    batch_size = 16
-    num_batches = pred_y.shape[0] // batch_size
-    MMD_list = []
+            # Compute metrics
+            _, MSE, KLD, L1 = loss_f.compute_loss(
+                pred_y,
+                gt_y,
+                pred_x,
+                gt_x,
+                mu,
+                var,
+                G
+            )
 
-    for i in tqdm(range(num_batches), desc="computing MMD by batches"):
-        start_idx = i * batch_size
-        end_idx = (i + 1) * batch_size
-        mmd_value = mmd_loss_func(
-            pred_y[start_idx:end_idx], gt_y[start_idx:end_idx]
-        ).item()
-        MMD_list.append(mmd_value)
+            # Compute MMD
+            MMD = mmd_loss_func(pred_y, gt_y)
 
-    MMD = np.mean(MMD_list)
+            MSE_l.append(MSE.item())
+            KLD_l.append(KLD.item())
+            L1_l.append(L1.item())
+            MMD_l.append(MMD.item())
 
-    return MMD, MSE.item(), KLD.item(), L1.item()
+            # Reset lists
+            pred_x_list, gt_x_list = [], []
+            gt_y_list, pred_y_list = [], []
+            c_y_list, mu_list, var_list = [], [], []
+
+
+    return np.mean(MMD_l), np.mean(MSE_l), np.mean(KLD_l), np.mean(L1_l)
 
 def evaluate_model_generic(
     model: torch.nn.Module,

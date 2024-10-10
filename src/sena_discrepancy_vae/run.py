@@ -27,7 +27,7 @@ logging.basicConfig(
 class Options:
     name: str = "example"
     model: str = "sena"
-    dataset_name: str = "Norman2019_raw"
+    dataset_name: str = "Norman2019_reduced"
     batch_size: int = 32
     sena_lambda: float = 0
     lr: float = 1e-3

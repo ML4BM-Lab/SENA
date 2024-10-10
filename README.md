@@ -75,11 +75,18 @@ we provide in the data folder as a zip file.:
 3. This project runs in a docker container. Run this code to build the image and to run the container
 
     ```bash
+
+    # move to the dockerfile folder (important)
+    cd dockerfile
+
     # build the image
     docker build -t <image_name> .
 
+    # move to the root directory
+    cd .. 
+
     # run creating a virtual link to your SENA folder.
-    docker run -dt -v <your_path>/SENA:/wdir/ --gpus all --name <container_name> <image_name>
+    docker run -dt -v .:/wdir/ --gpus all --name <container_name> <image_name>
 
     # access the docker
     docker exec -it sena_vae bash
@@ -89,14 +96,19 @@ we provide in the data folder as a zip file.:
 
     ```bash
     # assuming you are placed within the SENA folder and port 5678 is unused
-    docker run -dt -p 0.0.0.0:5678 -v .:/wdir/ --gpus all --name <container_name> <image_name>
+    docker run -dt -p 5678:5678 -v .:/wdir/ --gpus all --name <container_name> <image_name>
 
     # access the docker on a second terminal
     docker exec -it sena_vae bash
 
     # start the server
-    mlflow ui --host 0.0.0.0 --port 5678
+    mlflow ui 
+    --host 0.0.0.0 --port 5678
+
     ```
+
+    You can now access the server through your browser by typing: ```localhost:5678```. 
+    **Note:** This script was tested using docker version 27.2.0.
 
 5. Now you can run SENA-discrepancy-VAE by doing: 
 
@@ -108,7 +120,7 @@ we provide in the data folder as a zip file.:
 
     ```bash
     # You can choose the folds to evaluate. (e.g. only double)
-    python3 src/sena_discrepancy_vae/inference.py --savedir results/example --evaluation_types train test double
+    python3 src/sena_discrepancy_vae/inference.py --savedir results/example --evaluation train test double
     ```
 
 
