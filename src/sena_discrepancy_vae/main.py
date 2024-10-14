@@ -10,7 +10,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 import torch
 from train import train
-from utils import Norman2019DataLoader
+from utils import Norman2019DataLoader, Wessel2023HEK293DataLoader
 
 # Set up logging
 logging.basicConfig(
@@ -120,7 +120,10 @@ def main(args: argparse.Namespace) -> None:
     set_seeds(opts.seed)
 
     logging.info("Loading data...")
-    data_handler = Norman2019DataLoader(batch_size=opts.batch_size, dataname=opts.dataset_name)
+    if opts.dataset_name == 'norman':
+        data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
+    elif opts.dataset_name == 'wessel_hefk293':
+        data_handler = Wessel2023HEK293DataLoader(batch_size=opts.batch_size)
 
     # Get data from single-gene perturbation
     (

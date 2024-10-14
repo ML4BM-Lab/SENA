@@ -1,5 +1,7 @@
 data/Norman2019_raw.*
 data/Norman2019_reduced.h5ad
+data/wessel_dataset/
+data/output_pickles/
 
 !imgs/model_overview.png
 
@@ -27,5 +29,6 @@ src/encoder_vs_decoder/
 src/misc/
 src/uhler/wandb
 src/old/
+src/second_dataset/
 
 anonymize/
