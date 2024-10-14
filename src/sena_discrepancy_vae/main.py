@@ -110,7 +110,8 @@ def main(args: argparse.Namespace) -> None:
         model=args.model,
         sena_lambda=args.sena_lambda,
         name=args.name,
-        dataset_name=args.dataset
+        dataset_name=args.dataset,
+        log=args.log
     )
 
     logging.info(f"Configuration: {opts}")
