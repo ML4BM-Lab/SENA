@@ -258,7 +258,7 @@ class Norman2019DataLoader:
 
 class Wessel2023HEK293DataLoader:
     def __init__(
-        self, num_gene_th=5, batch_size=32, dataname="wessel_dataset/HEK293FT_carpool"
+        self, num_gene_th=5, batch_size=32, dataname="wessel_dataset/HEK293FT_carpool_processed"
     ):
         self.num_gene_th = num_gene_th
         self.batch_size = batch_size

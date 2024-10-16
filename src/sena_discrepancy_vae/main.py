@@ -65,7 +65,7 @@ def parse_args() -> argparse.Namespace:
         "--model", type=str, default="sena", help="Model to use for training."
     )
     parser.add_argument("--name", type=str, default="example", help="Name of the run.")
-    parser.add_argument("--dataset", type=str, default="Norman2019_raw", help="Name of the run.")
+    parser.add_argument("--dataset", type=str, default="Norman2019_reduced", help="Name of the run.")
 
     parser.add_argument("--latdim", type=int, default=105, help="Latent dimension.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
@@ -120,7 +120,7 @@ def main(args: argparse.Namespace) -> None:
     set_seeds(opts.seed)
 
     logging.info("Loading data...")
-    if opts.dataset_name == 'norman':
+    if 'Norman2019' in opts.dataset_name:
         data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
     elif opts.dataset_name == 'wessel_hefk293':
         data_handler = Wessel2023HEK293DataLoader(batch_size=opts.batch_size)

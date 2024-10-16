@@ -1,6 +1,7 @@
 data/Norman2019_raw.*
 data/Norman2019_reduced.h5ad
-data/wessel_dataset/
+data/wessel_dataset/HEK293FT_carpool.h5ad
+data/wessel_dataset/THP1_carpool.h5ad
 data/output_pickles/
 
 !imgs/model_overview.png
