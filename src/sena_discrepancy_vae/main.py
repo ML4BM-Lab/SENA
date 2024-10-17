@@ -119,7 +119,7 @@ def main(args: argparse.Namespace) -> None:
     # Set random seeds
     set_seeds(opts.seed)
 
-    logging.info("Loading data...")
+    logging.info(f"Loading {opts.dataset_name} dataset")
     if 'Norman2019' in opts.dataset_name:
         data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
     elif opts.dataset_name == 'wessel_hefk293':
@@ -135,9 +135,7 @@ def main(args: argparse.Namespace) -> None:
     ) = data_handler.get_data(mode="train")
 
     # Get data from double perturbation
-    dataloader_double, _, _, _ = data_handler.get_data(
-        mode="test", perturb_targets=ptb_targets
-    )
+    dataloader_double, _, _, _ = data_handler.get_data(mode="test")
 
     opts.dim = dim
     opts.cdim = cdim

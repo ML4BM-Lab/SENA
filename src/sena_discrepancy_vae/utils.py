@@ -171,7 +171,7 @@ class Norman2019DataLoader:
 
         return rel_dict
 
-    def get_data(self, mode="train", perturb_targets=None):
+    def get_data(self, mode="train"):
         assert mode in ["train", "test"], "mode not supported!"
 
         if mode == "train":
@@ -180,7 +180,6 @@ class Norman2019DataLoader:
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="single",
-                perturb_targets=perturb_targets,
             )
             train_idx, test_idx = self.split_scdata(
                 dataset,
@@ -223,15 +222,11 @@ class Norman2019DataLoader:
             return dataloader, dataloader2, dim, cdim, ptb_genes
 
         elif mode == "test":
-            assert (
-                perturb_targets is not None
-            ), "perturb_targets has to be specified during testing!"
             dataset = SCDataset(
                 adata=self.adata,
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="double",
-                perturb_targets=perturb_targets,
             )
             ptb_genes = dataset.ptb_targets
 
@@ -274,6 +269,9 @@ class Wessel2023HEK293DataLoader:
         self.gene_go_dict = None
         self.ensembl_genename_mapping_rev = None
 
+        #initialize dataset
+        self.load_wessel2023_dataset()
+
     def load_wessel2023_dataset(self):
 
         # Define file path
@@ -281,7 +279,9 @@ class Wessel2023HEK293DataLoader:
 
         # Keep only single interventions
         adata = sc.read_h5ad(fpath)
-        adata = adata[~adata.obs['TargetGenes'].str.contains("_")]
+        adata.obs['TargetGenes'] = adata.obs['TargetGenes'].str.replace("_",",")
+        adata.obs['TargetGenes'] = adata.obs['TargetGenes'].str.replace("NT", "")
+        adata = adata[~adata.obs['TargetGenes'].str.contains(",")]
 
         # Build gene sets
         gos, GO_to_ensembl_id_assignment, gene_go_dict = self.load_gene_go_assignments(
@@ -299,13 +299,14 @@ class Wessel2023HEK293DataLoader:
         )
 
         # Load double perturbation data
-        ptb_targets = sorted(adata.obs["TargetGenes"].unique().tolist())[:-1]
+        ptb_targets = sorted(adata.obs["TargetGenes"].unique().tolist())[1:]
         double_adata = sc.read_h5ad(fpath).copy()
+        double_adata.obs['TargetGenes'] = double_adata.obs['TargetGenes'].str.replace("_",",")
         double_adata = double_adata[
-            (double_adata.obs["TargetGenes"].str.contains("_"))
+            (double_adata.obs["TargetGenes"].str.contains(","))
             & (
                 double_adata.obs["TargetGenes"].map(
-                    lambda x: all([y in ptb_targets for y in x.split("_")])
+                    lambda x: all([y in ptb_targets for y in x.split(",")])
                 )
             )
         ]
@@ -415,7 +416,7 @@ class Wessel2023HEK293DataLoader:
 
         return rel_dict
 
-    def get_data(self, mode="train", perturb_targets=None):
+    def get_data(self, mode="train"):
         
         assert mode in ["train", "test"], "mode not supported!"
 
@@ -425,7 +426,7 @@ class Wessel2023HEK293DataLoader:
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="single",
-                perturb_targets=perturb_targets,
+                gene_var='TargetGenes'
             )
             train_idx, test_idx = self.split_scdata(
                 dataset,
@@ -437,7 +438,6 @@ class Wessel2023HEK293DataLoader:
             )  # Leave out some cells from the top 12 single target-gene interventions
 
             ptb_genes = dataset.ptb_targets
-
             dataset1 = Subset(dataset, train_idx)
             ptb_name = dataset.ptb_names[train_idx]
             dataloader = DataLoader(
@@ -460,15 +460,12 @@ class Wessel2023HEK293DataLoader:
             return dataloader, dataloader2, dim, cdim, ptb_genes
 
         elif mode == "test":
-            assert (
-                perturb_targets is not None
-            ), "perturb_targets has to be specified during testing!"
             dataset = SCDataset(
                 adata=self.adata,
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="double",
-                perturb_targets=perturb_targets,
+                gene_var="TargetGenes"
             )
             ptb_genes = dataset.ptb_targets
 
@@ -500,7 +497,7 @@ class SCDataset(Dataset):
         double_adata,
         ptb_targets,
         perturb_type="single",
-        perturb_targets=None,
+        gene_var = "guide_ids"
     ):
         super().__init__()
         assert perturb_type in ["single", "double"], "perturb_type not supported!"
@@ -510,40 +507,40 @@ class SCDataset(Dataset):
 
         if perturb_type == "single":
             ptb_adata = adata[
-                (~adata.obs["guide_ids"].str.contains(","))
-                & (adata.obs["guide_ids"] != "")
+                (~adata.obs[gene_var].str.contains(","))
+                & (adata.obs[gene_var] != "")
             ].copy()
 
             # Keep only cells containing perturbed genes
-            ptb_adata = ptb_adata[ptb_adata.obs["guide_ids"].isin(ptb_targets), :]
+            ptb_adata = ptb_adata[ptb_adata.obs[gene_var].isin(ptb_targets), :]
 
             self.ptb_samples = ptb_adata.X
-            self.ptb_names = ptb_adata.obs["guide_ids"].values
+            self.ptb_names = ptb_adata.obs[gene_var].values
             self.ptb_ids = self.map_ptb_features(
-                self.ptb_targets, ptb_adata.obs["guide_ids"].values
+                self.ptb_targets, ptb_adata.obs[gene_var].values
             )
 
         elif perturb_type == "double":
             ptb_adata = double_adata[
-                (double_adata.obs["guide_ids"].str.contains(","))
-                & (double_adata.obs["guide_ids"] != "")
+                (double_adata.obs[gene_var].str.contains(","))
+                & (double_adata.obs[gene_var] != "")
             ].copy()
 
             # Keep only cells containing perturbed genes
             ptb_adata = ptb_adata[
-                ptb_adata.obs["guide_ids"].apply(
+                ptb_adata.obs[gene_var].apply(
                     lambda x: all([y in ptb_targets for y in x.split(",")])
                 ),
                 :,
             ]
 
             self.ptb_samples = ptb_adata.X
-            self.ptb_names = ptb_adata.obs["guide_ids"].values
+            self.ptb_names = ptb_adata.obs[gene_var].values
             self.ptb_ids = self.map_ptb_features(
-                self.ptb_targets, ptb_adata.obs["guide_ids"].values
+                self.ptb_targets, ptb_adata.obs[gene_var].values
             )
 
-        self.ctrl_samples = adata[adata.obs["guide_ids"] == ""].X.copy()
+        self.ctrl_samples = adata[adata.obs[gene_var] == ""].X.copy()
         self.rand_ctrl_samples = self.ctrl_samples[
             np.random.choice(
                 self.ctrl_samples.shape[0], self.ptb_samples.shape[0], replace=True
