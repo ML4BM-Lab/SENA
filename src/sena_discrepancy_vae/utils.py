@@ -28,6 +28,7 @@ class Norman2019DataLoader:
         self.rel_dict = None
         self.gene_go_dict = None
         self.ensembl_genename_mapping_rev = None
+        self.gene_var="guide_ids"
 
         # Load the dataset
         self.load_norman_2019_dataset()
@@ -268,6 +269,7 @@ class Wessel2023HEK293DataLoader:
         self.rel_dict = None
         self.gene_go_dict = None
         self.ensembl_genename_mapping_rev = None
+        self.gene_var='TargetGenes'
 
         #initialize dataset
         self.load_wessel2023_dataset()
