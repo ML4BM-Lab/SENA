@@ -97,7 +97,7 @@ class CMVAE(nn.Module):
         self.c_dim = c_dim
         self.dim = dim
 
-        if mode == "mlp":
+        if mode == "original":
 
             self.fc1 = nn.Linear(self.dim, len(gos))
             weights_init(self.fc1)
