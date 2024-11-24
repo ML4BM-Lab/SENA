@@ -1,0 +1,17 @@
+{
+	"name": "SENA",
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GitHub.copilot",
+				"ms-python.python",
+				"charliermarsh.ruff",
+				"ms-toolsai.jupyter",
+				"mutantdino.resourcemonitor"
+			]
+		}
+	},
+	"postCreateCommand": "bash .devcontainer/post_create.sh",
+	"remoteUser": "vscode"
+}

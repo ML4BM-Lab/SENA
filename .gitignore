@@ -9,14 +9,11 @@ data/output_pickles/
 *.pdf
 *.pyc
 *.log
-*.json
-*.txt
 *.yaml
 *.png
 
 dockerfile/docker_readme.md
 !dockerfile/requirements.txt
-.vscode/
 results/
 mlruns/
 
