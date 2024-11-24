@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-# Install packages from GEARS' requirements.txt.
-pip install numpy pandas tqdm scikit-learn torch torch_geometric scanpy networkx dcor
-
-# Install GEARS package.
-pip install cell-gears
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# pip3 install torch_geometric
+pip3 install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cpu.html
+pip3 install cell-gears
