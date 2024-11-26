@@ -30,3 +30,5 @@ src/old/
 src/second_dataset/
 
 anonymize/
+
+/.venv/
