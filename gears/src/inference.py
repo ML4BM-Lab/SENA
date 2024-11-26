@@ -49,30 +49,33 @@ for g1 in genes_of_interest:
 all_possible_combos.sort()
 all_possible_combos = list(k for k, _ in itertools.groupby(all_possible_combos))
 
+# Get the names of all measured genes as comma-separated list.
+var_names_str = ",".join(map(str, list(norman.adata.var_names)))
+
 # Predict all single perturbations.
 single_results_file_path = os.path.join(
     results_dir_path, "gears_norman_no_test_single.txt"
 )
 with open(file=single_results_file_path, mode="w") as f:
-    print("single,expressions", file=f)
-    for gene in genes_of_interest:
-        print(f"[{file_name}] Predicting single: {gene}")
-        prediction = gears_model.predict(pert_list=[[gene]])
+    print(f"single,{var_names_str}", file=f)
+    for it, g in enumerate(genes_of_interest):
+        print(f"[{file_name}] Predicting single {it}/{len(genes_of_interest)}: {g}")
+        prediction = gears_model.predict(pert_list=[[g]])
         single = next(iter(prediction.keys()))
         expressions = prediction[single]
-        print(f"[{file_name}] {single},{expressions}")
-        print(f"{single},{expressions}", file=f)
+        expressions_str = ",".join(map(str, expressions))
+        print(f"{single},{expressions_str}", file=f)
 
 # Predict all combo perturbations.
 combo_results_file_path = os.path.join(
     results_dir_path, "gears_norman_no_test_combo.txt"
 )
 with open(file=combo_results_file_path, mode="w") as f:
-    print("combo,expressions", file=f)
+    print(f"combo,{var_names_str}", file=f)
     for it, c in enumerate(all_possible_combos):
-        print(f"[{file_name}] Predicting combo: {c}")
+        print(f"[{file_name}] Predicting combo {it}/{len(all_possible_combos)}: {c}")
         prediction = gears_model.predict(pert_list=[c])
         combo = next(iter(prediction.keys()))
         expressions = prediction[combo]
-        print(f"[{file_name}] {combo},{expressions}")
-        print(f"{combo},{expressions}", file=f)
+        expressions_str = ",".join(map(str, expressions))
+        print(f"{combo},{expressions_str}", file=f)
