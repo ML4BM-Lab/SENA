@@ -5,9 +5,9 @@ from gears import GEARS, PertData
 file_name = os.path.basename(__file__)
 
 # Create directories.
-data_dir_path = "data"
-models_dir_path = "models"
-results_dir_path = "results"
+data_dir_path = "/workspace/data"
+models_dir_path = "/workspace/models"
+results_dir_path = "/workspace/results"
 os.makedirs(name=data_dir_path, exist_ok=True)
 os.makedirs(name=models_dir_path, exist_ok=True)
 os.makedirs(name=results_dir_path, exist_ok=True)
@@ -25,7 +25,7 @@ norman.prepare_split(split="no_test", seed=42)  # Used in Fig. 4.
 norman.get_dataloader(batch_size=32, test_batch_size=128)
 
 # Set up, train, and save GEARS model.
-device = "cpu"
+device = "cuda"
 print(f"[{file_name}] Device: {device}")
 print(f"[{file_name}] Training GEARS model.")
 gears_model = GEARS(pert_data=norman, device=device)

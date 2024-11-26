@@ -6,9 +6,9 @@ from gears import GEARS, PertData
 file_name = os.path.basename(__file__)
 
 # Set the paths.
-data_dir_path = "data"
-models_dir_path = "models"
-results_dir_path = "results"
+data_dir_path = "/workspace/data"
+models_dir_path = "/workspace/models"
+results_dir_path = "/workspace/results"
 
 # Load "norman" data.
 print(f"[{file_name}] Loading 'norman' data from: {data_dir_path}")
@@ -23,7 +23,7 @@ norman.prepare_split(split="no_test", seed=42)  # Used in Fig. 4.
 norman.get_dataloader(batch_size=32, test_batch_size=128)
 
 # Load the model.
-device = "cpu"
+device = "cuda"
 print(f"[{file_name}] Device: {device}")
 print(f"[{file_name}] Loading GEARS model.")
 gears_model = GEARS(pert_data=norman, device=device)
