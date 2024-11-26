@@ -5,5 +5,5 @@ docker build -t gears .
 
 Run Docker container:
 ```shell
-docker run -it -v $(pwd):/workspace gears bash
+docker run -it -v $(pwd):/workspace --gpus all gears bash
 ```
