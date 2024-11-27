@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join("..", "src", "sena_discrepancy_vae"
 import torch  # noqa: E402
 from utils import MMD_loss  # noqa: E402
 
-MODEL_NAME = "gears_norman_no_test"
+MODEL_NAME = "gears_norman_no_test_seed_832_hidden_size_105"
 
 file_name = os.path.basename(__file__)
 
@@ -30,7 +30,7 @@ df = pd.read_csv(
     filepath_or_buffer=os.path.join(results_dir_path, f"{MODEL_NAME}_double.csv")
 )
 
-results_file_path = os.path.join(results_dir_path, f"{MODEL_NAME}_double_mmd.csv")
+results_file_path = os.path.join(results_dir_path, f"{MODEL_NAME}_double_metrics.csv")
 
 with open(file=results_file_path, mode="w") as f:
     print(
