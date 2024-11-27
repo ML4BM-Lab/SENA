@@ -30,50 +30,71 @@ gears_model = GEARS(pert_data=norman, device=device)
 gears_model.load_pretrained(path=os.path.join(models_dir_path, "gears_norman_no_test"))
 
 # Get all single perturbations.
-genes_of_interest = set(
+single_perturbations = set(
     [
         c.strip("+ctrl")
         for c in norman.adata.obs["condition"]
         if ("ctrl+" in c) or ("+ctrl" in c)
     ]
 )
-genes_of_interest = [g for g in genes_of_interest if g in list(norman.pert_names)]
+print(f"[{file_name}] Number of single perturbations: {len(single_perturbations)}")
+
+# Get all double perturbations.
+double_perturbations = set(
+    [c for c in norman.adata.obs["condition"] if "ctrl" not in c]
+)
+print(f"[{file_name}] Number of double perturbations: {len(double_perturbations)}")
 
 # Generate all possible double perturbations (combos).
-all_possible_combos = []
-for g1 in genes_of_interest:
-    for g2 in genes_of_interest:
+combo_perturbations = []
+for g1 in single_perturbations:
+    for g2 in single_perturbations:
         if g1 == g2:
             continue
-        all_possible_combos.append(sorted([g1, g2]))
-all_possible_combos.sort()
-all_possible_combos = list(k for k, _ in itertools.groupby(all_possible_combos))
+        combo_perturbations.append(sorted([g1, g2]))
+combo_perturbations.sort()
+combo_perturbations = list(k for k, _ in itertools.groupby(combo_perturbations))
+print(f"[{file_name}] Number of combo perturbations: {len(combo_perturbations)}")
 
 # Get the names of all measured genes as comma-separated list.
 var_names_str = ",".join(map(str, list(norman.adata.var_names)))
 
 # Predict all single perturbations.
 single_results_file_path = os.path.join(
-    results_dir_path, "gears_norman_no_test_single.txt"
+    results_dir_path, "gears_norman_no_test_single.csv"
 )
 with open(file=single_results_file_path, mode="w") as f:
     print(f"single,{var_names_str}", file=f)
-    for it, g in enumerate(genes_of_interest):
-        print(f"[{file_name}] Predicting single {it}/{len(genes_of_interest)}: {g}")
+    for i, g in enumerate(single_perturbations):
+        print(f"[{file_name}] Predicting single {i}/{len(single_perturbations)}: {g}")
         prediction = gears_model.predict(pert_list=[[g]])
         single = next(iter(prediction.keys()))
         expressions = prediction[single]
         expressions_str = ",".join(map(str, expressions))
         print(f"{single},{expressions_str}", file=f)
 
+# Predict all double perturbations.
+double_results_file_path = os.path.join(
+    results_dir_path, "gears_norman_no_test_double.csv"
+)
+with open(file=double_results_file_path, mode="w") as f:
+    print(f"double,{var_names_str}", file=f)
+    for i, d in enumerate(double_perturbations):
+        print(f"[{file_name}] Predicting double {i}/{len(double_perturbations)}: {d}")
+        prediction = gears_model.predict(pert_list=[d.split("+")])
+        double = next(iter(prediction.keys()))
+        expressions = prediction[double]
+        expressions_str = ",".join(map(str, expressions))
+        print(f"{double},{expressions_str}", file=f)
+
 # Predict all combo perturbations.
 combo_results_file_path = os.path.join(
-    results_dir_path, "gears_norman_no_test_combo.txt"
+    results_dir_path, "gears_norman_no_test_combo.csv"
 )
 with open(file=combo_results_file_path, mode="w") as f:
     print(f"combo,{var_names_str}", file=f)
-    for it, c in enumerate(all_possible_combos):
-        print(f"[{file_name}] Predicting combo {it}/{len(all_possible_combos)}: {c}")
+    for i, c in enumerate(combo_perturbations):
+        print(f"[{file_name}] Predicting combo {i}/{len(combo_perturbations)}: {c}")
         prediction = gears_model.predict(pert_list=[c])
         combo = next(iter(prediction.keys()))
         expressions = prediction[combo]
