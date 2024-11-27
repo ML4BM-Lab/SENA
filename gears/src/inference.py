@@ -19,7 +19,7 @@ norman.load(data_name="norman")
 # [procedure](https://github.com/yhr91/GEARS_misc/blob/main/paper/Fig4_UMAP_train.py) as
 # used for Figure 4 in the GEARS paper.
 print("[{file_name}] Preparing data split.")
-norman.prepare_split(split="no_test", seed=42)  # Used in Fig. 4.
+norman.prepare_split(split="no_test", seed=42)
 norman.get_dataloader(batch_size=32, test_batch_size=128)
 
 # Load the model.
