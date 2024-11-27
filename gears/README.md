@@ -17,3 +17,8 @@ Inference:
 ```shell
 python3 src/inference.py
 ```
+
+Evaluation (outside of Docker container):
+```shell
+python  src/evaluation.py
+```

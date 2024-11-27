@@ -3,6 +3,8 @@ import os
 
 from gears import GEARS, PertData
 
+MODEL_NAME = "gears_norman_no_test"
+
 file_name = os.path.basename(__file__)
 
 # Set the paths.
@@ -18,7 +20,7 @@ norman.load(data_name="norman")
 # Split data and get dataloaders. This is the same
 # [procedure](https://github.com/yhr91/GEARS_misc/blob/main/paper/Fig4_UMAP_train.py) as
 # used for Figure 4 in the GEARS paper.
-print("[{file_name}] Preparing data split.")
+print(f"[{file_name}] Preparing data split.")
 norman.prepare_split(split="no_test", seed=42)
 norman.get_dataloader(batch_size=32, test_batch_size=128)
 
@@ -27,7 +29,7 @@ device = "cuda"
 print(f"[{file_name}] Device: {device}")
 print(f"[{file_name}] Loading GEARS model.")
 gears_model = GEARS(pert_data=norman, device=device)
-gears_model.load_pretrained(path=os.path.join(models_dir_path, "gears_norman_no_test"))
+gears_model.load_pretrained(path=os.path.join(models_dir_path, MODEL_NAME))
 
 # Get all single perturbations.
 single_perturbations = set(
@@ -60,13 +62,11 @@ print(f"[{file_name}] Number of combo perturbations: {len(combo_perturbations)}"
 var_names_str = ",".join(map(str, list(norman.adata.var_names)))
 
 # Predict all single perturbations.
-single_results_file_path = os.path.join(
-    results_dir_path, "gears_norman_no_test_single.csv"
-)
+single_results_file_path = os.path.join(results_dir_path, f"{MODEL_NAME}_single.csv")
 with open(file=single_results_file_path, mode="w") as f:
     print(f"single,{var_names_str}", file=f)
     for i, g in enumerate(single_perturbations):
-        print(f"[{file_name}] Predicting single {i}/{len(single_perturbations)}: {g}")
+        print(f"[{file_name}] Predicting single {i+1}/{len(single_perturbations)}: {g}")
         prediction = gears_model.predict(pert_list=[[g]])
         single = next(iter(prediction.keys()))
         expressions = prediction[single]
@@ -74,13 +74,11 @@ with open(file=single_results_file_path, mode="w") as f:
         print(f"{single},{expressions_str}", file=f)
 
 # Predict all double perturbations.
-double_results_file_path = os.path.join(
-    results_dir_path, "gears_norman_no_test_double.csv"
-)
+double_results_file_path = os.path.join(results_dir_path, f"{MODEL_NAME}_double.csv")
 with open(file=double_results_file_path, mode="w") as f:
     print(f"double,{var_names_str}", file=f)
     for i, d in enumerate(double_perturbations):
-        print(f"[{file_name}] Predicting double {i}/{len(double_perturbations)}: {d}")
+        print(f"[{file_name}] Predicting double {i+1}/{len(double_perturbations)}: {d}")
         prediction = gears_model.predict(pert_list=[d.split("+")])
         double = next(iter(prediction.keys()))
         expressions = prediction[double]
@@ -88,13 +86,11 @@ with open(file=double_results_file_path, mode="w") as f:
         print(f"{double},{expressions_str}", file=f)
 
 # Predict all combo perturbations.
-combo_results_file_path = os.path.join(
-    results_dir_path, "gears_norman_no_test_combo.csv"
-)
+combo_results_file_path = os.path.join(results_dir_path, f"{MODEL_NAME}_combo.csv")
 with open(file=combo_results_file_path, mode="w") as f:
     print(f"combo,{var_names_str}", file=f)
     for i, c in enumerate(combo_perturbations):
-        print(f"[{file_name}] Predicting combo {i}/{len(combo_perturbations)}: {c}")
+        print(f"[{file_name}] Predicting combo {i+1}/{len(combo_perturbations)}: {c}")
         prediction = gears_model.predict(pert_list=[c])
         combo = next(iter(prediction.keys()))
         expressions = prediction[combo]
