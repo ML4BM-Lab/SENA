@@ -1,19 +1,15 @@
-import argparse
+import argparse  # noqa: D100
 import itertools
 import os
-import sys
 
 import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData
+from mmd_loss import MMDLoss  # type: ignore # noqa: E402
 from scipy.sparse import csr_matrix
 
 from gears import GEARS, PertData
-
-sys.path.append(os.path.abspath(os.path.join("..", "src", "sena_discrepancy_vae")))
-
-from utils import MMD_loss  # noqa: E402
 
 DATA_DIR_PATH = "data"
 MODELS_DIR_PATH = "models"
@@ -24,57 +20,8 @@ PREDICT_DOUBLE = True
 PREDICT_COMBO = False
 
 
-def main():
-    # Parse the command line arguments.
-    parser = argparse.ArgumentParser(description="Train GEARS model.")
-    parser.add_argument(
-        "--hidden_size", type=int, required=True, help="Size of the hidden layers."
-    )
-    parser.add_argument(
-        "--seed", type=int, required=True, help="Random seed for data splitting."
-    )
-    parser.add_argument("--split", type=str, default="no_test", help="Data split.")
-    parser.add_argument("--device", type=str, default="cuda", help="Device to use.")
-    args = parser.parse_args()
-
-    # Print all arguments
-    print("Arguments:")
-    for arg, value in vars(args).items():
-        print(f"  {arg}: {value}")
-
-    # Create directories.
-    os.makedirs(name=DATA_DIR_PATH, exist_ok=True)
-    os.makedirs(name=MODELS_DIR_PATH, exist_ok=True)
-    os.makedirs(name=RESULTS_DIR_PATH, exist_ok=True)
-
-    # Load "norman" data.
-    print("Loading 'norman' data.")
-    norman = PertData(data_path=DATA_DIR_PATH)
-    norman.load(data_name="norman")
-
-    # Split data and get dataloaders. This is the same
-    # [procedure](https://github.com/yhr91/GEARS_misc/blob/main/paper/Fig4_UMAP_train.py) as
-    # used for Figure 4 in the GEARS paper.
-    print("Preparing data split.")
-    norman.prepare_split(split=args.split, seed=args.seed)
-    norman.get_dataloader(batch_size=32)
-
-    # model_name = train(
-    #     pert_data=norman,
-    #     hidden_size=args.hidden_size,
-    #     seed=args.seed,
-    #     split=args.split,
-    #     device=args.device,
-    # )
-
-    # predict(pert_data=norman, device=args.device, model_name=model_name)
-
-    model_name = "gears_norman_no_test_seed_572_hidden_size_35"
-    evaluate(adata=norman.adata, model_name=model_name)
-
-
 def train(
-    pert_data: PertData, hidden_size: int, seed: int, split: str, device: str
+    pert_data: PertData, split: str, seed: int, hidden_size: int, device: str
 ) -> str:
     """Set up, train, and save GEARS model."""
     print("Training GEARS model.")
@@ -174,7 +121,8 @@ def predict(pert_data: PertData, device: str, model_name: str) -> None:
                 print(f"{combo},{expressions_str}", file=f)
 
 
-def evaluate(adata: AnnData, model_name: str):
+def evaluate_double(adata: AnnData, model_name: str):
+    """Evaluate the predicted GEPs of double perturbations."""
     # Load predicted GEPs.
     df = pd.read_csv(
         filepath_or_buffer=os.path.join(RESULTS_DIR_PATH, f"{model_name}_double.csv")
@@ -192,45 +140,35 @@ def evaluate(adata: AnnData, model_name: str):
         )
 
         for i, double in enumerate(df["double"]):
-            # mmd_values_true_vs_ctrl = []
-            # mmd_values_true_vs_pred = []
-            # mse_values_true_vs_ctrl = []
-            # mse_values_true_vs_pred = []
-
             # Get the predicted GEP for the current double perturbation.
             pred_gep = df.loc[df["double"] == double]
             pred_gep = df.iloc[0, 1:].tolist()
 
             # Get all the true GEPs with the current double perturbation.
             double = double.replace("_", "+")
-            print(f"Double perturbation {i+1}/{len(df['double'])}: {double}")
+            print(f"Evaluating double {i+1}/{len(df['double'])}: {double}")
             true_geps = adata[adata.obs["condition"] == double]
-            N = true_geps.n_obs
+            n = true_geps.n_obs
 
-            # Get N random control GEPs.
+            # Get n random control GEPs.
             all_ctrl_geps = adata[adata.obs["condition"] == "ctrl"]
             random_indices = np.random.choice(
-                all_ctrl_geps.n_obs, size=N, replace=False
+                all_ctrl_geps.n_obs, size=n, replace=False
             )
             ctrl_geps = all_ctrl_geps[random_indices, :]
 
-            # Copy the predicted GEP N times.
-            pred_geps = csr_matrix(np.tile(pred_gep, (N, 1)))
+            # Copy the predicted GEP n times.
+            pred_geps = csr_matrix(np.tile(pred_gep, reps=(n, 1)))
 
-            # Compute the MMD and MSE between:
-            # - True GEPs and control GEPs.
-            # - True GEPs and predicted GEPs.
-            true_geps = [gep.X[0, :].toarray().flatten() for gep in true_geps]
-            ctrl_geps = [gep.X[0, :].toarray().flatten() for gep in ctrl_geps]
-            pred_geps = [gep[0, :].toarray().flatten() for gep in pred_geps]
-            true_geps_tensor = torch.tensor(true_geps)
-            ctrl_geps_tensor = torch.tensor(ctrl_geps)
-            pred_geps_tensor = torch.tensor(pred_geps)
+            # Convert to tensors.
+            true_geps_tensor = torch.tensor(true_geps.X.toarray())
+            ctrl_geps_tensor = torch.tensor(ctrl_geps.X.toarray())
+            pred_geps_tensor = torch.tensor(pred_geps.toarray())
 
             # MMD setup.
-            MMD_sigma = 200.0
+            mmd_sigma = 200.0
             kernel_num = 10
-            mmd_loss = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
+            mmd_loss = MMDLoss(fix_sigma=mmd_sigma, kernel_num=kernel_num)
 
             # Compute MMD for the entire batch.
             mmd_true_vs_ctrl = mmd_loss.forward(
@@ -253,53 +191,60 @@ def evaluate(adata: AnnData, model_name: str):
             print(f"MSE (true vs. control):   {mse_true_vs_ctrl:10.6f}")
             print(f"MSE (true vs. predicted): {mse_true_vs_pred:10.6f}")
             print(
-                f"{double},{N},{mmd_true_vs_ctrl},{mmd_true_vs_pred},{mse_true_vs_ctrl},{mse_true_vs_pred}",
+                f"{double},{n},{mmd_true_vs_ctrl},{mmd_true_vs_pred},{mse_true_vs_ctrl},{mse_true_vs_pred}",
                 file=f,
             )
 
-            # for true_gep, ctrl_gep in zip(true_geps, ctrl_geps):
-            #     true_gep = true_gep.X[0, :].toarray().flatten().tolist()
-            #     ctrl_gep = ctrl_gep.X[0, :].toarray().flatten().tolist()
 
-            #     # MMD setup.
-            #     MMD_sigma: float = 200.0
-            #     kernel_num: int = 10
-            #     mmd_loss = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
+def main():  # noqa: D103
+    # Parse the command line arguments.
+    parser = argparse.ArgumentParser(description="Train, predict, evaluate GEARS.")
+    parser.add_argument("--split", type=str, default="no_test", help="Data split.")
+    parser.add_argument(
+        "--seed", type=int, required=True, help="Random seed for data splitting."
+    )
+    parser.add_argument(
+        "--hidden_size", type=int, required=True, help="Size of the hidden layers."
+    )
+    parser.add_argument("--device", type=str, default="cuda", help="Device to use.")
+    args = parser.parse_args()
 
-            #     # Compute the MMD between the true GEP and the control GEP.
-            #     mmd = mmd_loss.forward(
-            #         source=torch.tensor(ctrl_gep).unsqueeze(0),
-            #         target=torch.tensor(true_gep).unsqueeze(0),
-            #     )
-            #     mmd_values_true_vs_ctrl.append(mmd.item())
+    # Print all arguments.
+    print("Arguments:")
+    for arg, value in vars(args).items():
+        print(f"  {arg}: {value}")
 
-            #     # Compute the MSE between the true GEP and the control GEP.
-            #     mse = np.mean((np.array(true_gep) - np.array(ctrl_gep)) ** 2)
-            #     mse_values_true_vs_ctrl.append(mse)
+    # Create directories.
+    os.makedirs(name=DATA_DIR_PATH, exist_ok=True)
+    os.makedirs(name=MODELS_DIR_PATH, exist_ok=True)
+    os.makedirs(name=RESULTS_DIR_PATH, exist_ok=True)
 
-            #     # Compute the MMD between the true GEP and the predicted GEP.
-            #     mmd = mmd_loss.forward(
-            #         source=torch.tensor(pred_gep).unsqueeze(0),
-            #         target=torch.tensor(true_gep).unsqueeze(0),
-            #     )
-            #     mmd_values_true_vs_pred.append(mmd.item())
+    # Load "norman" data.
+    print("Loading 'norman' data.")
+    norman = PertData(data_path=DATA_DIR_PATH)
+    norman.load(data_name="norman")
 
-            #     # Compute the MSE between the true GEP and the predicted GEP.
-            #     mse = np.mean((np.array(true_gep) - np.array(pred_gep)) ** 2)
-            #     mse_values_true_vs_pred.append(mse)
+    # Split data and get dataloaders. This is the same procedure as used for Figure 4 in
+    # the GEARS paper.
+    # See also: ttps://github.com/yhr91/GEARS_misc/blob/main/paper/Fig4_UMAP_train.py
+    print("Preparing data split.")
+    norman.prepare_split(split=args.split, seed=args.seed)
+    norman.get_dataloader(batch_size=32)
 
-            # mmd_avg_true_vs_ctrl = np.mean(mmd_values_true_vs_ctrl)
-            # mmd_avg_true_vs_pred = np.mean(mmd_values_true_vs_pred)
-            # mse_avg_true_vs_ctrl = np.mean(mse_values_true_vs_ctrl)
-            # mse_avg_true_vs_pred = np.mean(mse_values_true_vs_pred)
-            # print(f"MMD (true vs. control):   {mmd_avg_true_vs_ctrl:10.6f}")
-            # print(f"MMD (true vs. predicted): {mmd_avg_true_vs_pred:10.6f}")
-            # print(f"MSE (true vs. control):   {mse_avg_true_vs_ctrl:10.6f}")
-            # print(f"MSE (true vs. predicted): {mse_avg_true_vs_pred:10.6f}")
-            # print(
-            #     f"{double},{N},{mmd_avg_true_vs_ctrl},{mmd_avg_true_vs_pred},{mse_avg_true_vs_ctrl},{mse_avg_true_vs_pred}",
-            #     file=f,
-            # )
+    # Train.
+    model_name = train(
+        pert_data=norman,
+        split=args.split,
+        seed=args.seed,
+        hidden_size=args.hidden_size,
+        device=args.device,
+    )
+
+    # Predict.
+    predict(pert_data=norman, device=args.device, model_name=model_name)
+
+    # Evaluate.
+    evaluate_double(adata=norman.adata, model_name=model_name)
 
 
 if __name__ == "__main__":
