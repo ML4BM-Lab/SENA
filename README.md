@@ -60,18 +60,11 @@ we provide in the data folder as a zip file.:
 3. This project runs in a docker container. Run this code to build the image and to run the container
 
     ```bash
-
-    # move to the dockerfile folder (important)
-    cd dockerfile
-
     # build the image
-    docker build -t <image_name> .
-
-    # move to the root directory
-    cd .. 
+    docker build -t <image_name> dockerfile
 
     # run creating a virtual link to your SENA folder.
-    docker run -dt -v .:/wdir/ --gpus all --name <container_name> <image_name>
+    docker run -dt -v $(pwd):/wdir/ --gpus all --name <container_name> <image_name>
 
     # access the docker (we will assume its called sena_vae)
     docker exec -it sena_vae bash
