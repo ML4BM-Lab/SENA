@@ -79,7 +79,7 @@ class Norman2019DataLoader:
         self.ensembl_genename_mapping_rev = ensembl_genename_mapping_rev
 
     def load_gene_go_assignments(self, adata):
-        # Filter genes not in any GO
+        # load GOs
         GO_to_ensembl_id_assignment = pd.read_csv(
             os.path.join("data", "go_kegg_gene_map.tsv"), sep="\t"
         )
