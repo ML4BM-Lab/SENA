@@ -21,6 +21,7 @@ library(wordcloud)
 library(tm)
 library(reticulate)
 
+# define significant thresholds, subsampling and number of latent factors
 diff_fc_perc <- 0.01
 sign_threshold <- -log10(0.05)
 subsampling <- 100
