@@ -74,7 +74,7 @@ fc_stats <- fc1 %>%
 rownames(fc_stats) <- fc_stats$condition
 fc_stats$condition <- NULL
 
-# Differences vs the LAST row (keep exact original logic)
+# Differences vs the LAST row 
 diff_fc_stats <- fc_stats[1:(nrow(fc_stats) - 1), ]
 for (i in 1:nrow(diff_fc_stats)) {
   diff_fc_stats[i, ] <- abs(fc_stats[i, ] - fc_stats[nrow(fc_stats), ])
@@ -132,7 +132,6 @@ suppressMessages(
 
 # Global threshold for effect size
 diff_fc_threshold <- quantile(as.matrix(diff_fc_stats), 1 - diff_fc_perc)
-# (Note: setting min of max rows was tested and discarded in original comment)
 
 # Zero-out entries failing either criterion
 diff_fc_stats <- as.matrix(diff_fc_stats)
