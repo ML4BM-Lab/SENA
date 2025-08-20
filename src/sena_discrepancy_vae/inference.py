@@ -40,8 +40,8 @@ def evaluate_generated_samples(
     gt_y_list, pred_y_list = [], []
     c_y_list, mu_list, var_list = [], [], []
     MSE_l, KLD_l, L1_l, MMD_l = [], [], [], []
-    
-    #Initialize MMD loss
+
+    # Initialize MMD loss
     mmd_loss_func = MMD_loss(fix_sigma=MMD_sigma, kernel_num=kernel_num)
 
     for i, X in enumerate(tqdm(dataloader, desc="evaluating loader")):
@@ -86,13 +86,7 @@ def evaluate_generated_samples(
 
             # Compute metrics
             _, MSE, KLD, L1 = loss_f.compute_loss(
-                pred_y,
-                gt_y,
-                pred_x,
-                gt_x,
-                mu,
-                var,
-                G
+                pred_y, gt_y, pred_x, gt_x, mu, var, G
             )
 
             # Compute MMD
@@ -108,8 +102,8 @@ def evaluate_generated_samples(
             gt_y_list, pred_y_list = [], []
             c_y_list, mu_list, var_list = [], [], []
 
-
     return np.mean(MMD_l), np.mean(MSE_l), np.mean(KLD_l), np.mean(L1_l)
+
 
 def evaluate_model_generic(
     model: torch.nn.Module,
@@ -146,7 +140,9 @@ def evaluate_model_generic(
     }
 
     if mode not in data_file_map:
-        raise ValueError(f"Invalid data type: {mode}. Expected 'train', 'test', or 'double'.")
+        raise ValueError(
+            f"Invalid data type: {mode}. Expected 'train', 'test', or 'double'."
+        )
 
     # Construct the full path to the data file
     data_path = os.path.join(savedir, data_file_map[mode])
@@ -174,6 +170,7 @@ def evaluate_model_generic(
         kernel_num=kernel_num,
     )
 
+
 def evaluate_model(
     model: torch.nn.Module,
     mode: str,
@@ -194,12 +191,12 @@ def evaluate_model(
         pd.DataFrame: DataFrame containing the metrics.
     """
 
-    if mode not in ['train','test','double']:
+    if mode not in ["train", "test", "double"]:
         raise ValueError(
             f"Invalid mode '{mode}'. Expected 'train', 'test', or 'double'."
         )
 
-    #compute losses
+    # compute losses
     MMD, MSE, KLD, L1 = evaluate_model_generic(
         model,
         loss_f,
@@ -211,15 +208,14 @@ def evaluate_model(
         kernel_num=kernel_num,
     )
 
-    #build dataframe
+    # build dataframe
     data = {"Metric": ["MMD", "MSE", "KLD", "L1"], "Values": [MMD, MSE, KLD, L1]}
     df = pd.DataFrame(data)
 
     return df
 
-def compute_metrics(
-    savedir: str, evaluation: List[str] = ["double"]
-) -> pd.DataFrame:
+
+def compute_metrics(savedir: str, evaluation: List[str] = ["double"]) -> pd.DataFrame:
     """
     Compute metrics for a given model.
 
@@ -255,8 +251,10 @@ def compute_metrics(
     latdim = config.get("latdim", 105)
     model_name = config.get("name", "example")
 
-    #init loss function class
-    loss_f = LossFunction(MMD_sigma=MMD_sigma, kernel_num=kernel_num, matched_IO=matched_IO)
+    # init loss function class
+    loss_f = LossFunction(
+        MMD_sigma=MMD_sigma, kernel_num=kernel_num, matched_IO=matched_IO
+    )
 
     # Prepare device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -311,6 +309,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    metrics_df = compute_metrics(
-        savedir=args.savedir, evaluation=args.evaluation
-    )
+    metrics_df = compute_metrics(savedir=args.savedir, evaluation=args.evaluation)

@@ -36,7 +36,7 @@ class NetworkActivity_layer(torch.nn.Module):
             for latent_go in self.relation_dict[i]:
                 mask[i, latent_go] = 1
 
-        #include λ
+        # include λ
         self.mask = mask
         self.mask[self.mask == 0] = lambda_parameter
 
@@ -106,7 +106,11 @@ class CMVAE(nn.Module):
 
             # connect initial gene space to gene sets
             self.fc1 = NetworkActivity_layer(
-                self.dim, len(gos), rel_dict, device=device, lambda_parameter=sena_lambda
+                self.dim,
+                len(gos),
+                rel_dict,
+                device=device,
+                lambda_parameter=sena_lambda,
             )
 
         # mean and var

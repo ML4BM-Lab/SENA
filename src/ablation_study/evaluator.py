@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from tqdm import tqdm
 
+
 # Define the custom NetworkActivityLayer
 class NetworkActivityLayer(nn.Module):
     def __init__(
@@ -23,7 +24,11 @@ class NetworkActivityLayer(nn.Module):
         device: Optional[torch.device] = None,
     ):
         super().__init__()
-        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = (
+            device
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
 
         # Create sparse weight mask according to relationships
         mask = torch.zeros((input_size, output_size), device=self.device)
@@ -38,11 +43,13 @@ class NetworkActivityLayer(nn.Module):
         self.mask[self.mask == 0] = lambda_parameter
 
         # Initialize weights
-        self.weight = nn.Parameter(torch.empty((output_size, input_size), device=self.device))
+        self.weight = nn.Parameter(
+            torch.empty((output_size, input_size), device=self.device)
+        )
         if bias:
             self.bias = nn.Parameter(torch.empty(output_size, device=self.device))
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
 
         self.reset_parameters()
 
@@ -59,31 +66,34 @@ class NetworkActivityLayer(nn.Module):
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
+
 # Evaluator class
 class Evaluator:
     def __init__(
         self,
         beta: float = 1.0,
         device: Optional[torch.device] = None,
-        logging = None,
-        epochs = None,
-        report_epoch = 50,
+        logging=None,
+        epochs=None,
+        report_epoch=50,
     ):
         self.beta = beta
-        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = (
+            device
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
         self.optimizer: optim.Optimizer = None
         self.model: nn.Module = None
         self.logging = logging
         self.epochs = epochs
         self.report_epoch = report_epoch
 
-
     def initialize_optimizer(self) -> None:
         """Initializes the optimizer."""
         self.optimizer = optim.AdamW(self.model.parameters(), lr=1e-4)
 
     def compute_loss(self, batch: torch.Tensor, output: Any) -> torch.Tensor:
-
         """Computes the loss for a given batch."""
         if self.mode == "ae":
             recon_x = output
@@ -96,9 +106,9 @@ class Evaluator:
         else:
             raise ValueError(f"Unsupported model: {self.mode}")
 
-        if 'l1' in self.encoder_name:
+        if "l1" in self.encoder_name:
             # Apply L1 regularization over the first layer
-            l1_lambda_num = float(self.enc.split('_')[1])
+            l1_lambda_num = float(self.enc.split("_")[1])
             l1_lambda = int(l1_lambda_num)
             l1_norm = self.model.encoder.weight.abs().sum()
             loss += l1_lambda * l1_norm
@@ -112,20 +122,34 @@ class Evaluator:
             output = self.model(test_data.to(self.device))
             if self.mode == "ae":
                 recon_x = output
-                test_loss = nn.functional.mse_loss(recon_x, test_data.to(self.device)).item()
-                metrics = {'test_loss': test_loss}
+                test_loss = nn.functional.mse_loss(
+                    recon_x, test_data.to(self.device)
+                ).item()
+                metrics = {"test_loss": test_loss}
             elif self.mode == "vae":
                 recon_x, mean, var = output
-                recon_loss = nn.functional.mse_loss(recon_x, test_data.to(self.device)).item()
-                kl_div = -0.5 * torch.mean(1 + torch.log(var) - mean.pow(2) - var).item()
+                recon_loss = nn.functional.mse_loss(
+                    recon_x, test_data.to(self.device)
+                ).item()
+                kl_div = (
+                    -0.5 * torch.mean(1 + torch.log(var) - mean.pow(2) - var).item()
+                )
                 total_loss = recon_loss + self.beta * kl_div
-                metrics = {'test_loss': total_loss, 'test_recon_loss': recon_loss, 'test_kl_loss': kl_div}
+                metrics = {
+                    "test_loss": total_loss,
+                    "test_recon_loss": recon_loss,
+                    "test_kl_loss": kl_div,
+                }
             else:
                 raise ValueError(f"Unsupported model: {self.model}")
         return metrics
 
     def run(
-        self, model: nn.Module, seed: int, train_loader: DataLoader, test_data: torch.Tensor
+        self,
+        model: nn.Module,
+        seed: int,
+        train_loader: DataLoader,
+        test_data: torch.Tensor,
     ) -> pd.DataFrame:
         """
         Runs the training and evaluation process.
@@ -150,7 +174,7 @@ class Evaluator:
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-        for epoch in tqdm(range(self.epochs), desc = 'Training'):
+        for epoch in tqdm(range(self.epochs), desc="Training"):
             self.model.train()
             epoch_losses = []
 
@@ -166,29 +190,34 @@ class Evaluator:
             # Evaluation and metrics
             if epoch % self.report_epoch == 0:
                 metrics = self.evaluate(test_data)
-                metrics.update({
-                    'epoch': epoch,
-                    'train_loss': np.mean(epoch_losses),
-                    'encoder_name': self.encoder_name,
-                    'mode': self.mode
-                })
+                metrics.update(
+                    {
+                        "epoch": epoch,
+                        "train_loss": np.mean(epoch_losses),
+                        "encoder_name": self.encoder_name,
+                        "mode": self.mode,
+                    }
+                )
                 results.append(metrics)
 
                 # Print progress
-                self.logging.info(f"Epoch {epoch+1}/{self.epochs}, Train Loss: {metrics['train_loss']:.4f}, Test Loss: {metrics['test_loss']:.4f}")
+                self.logging.info(
+                    f"Epoch {epoch+1}/{self.epochs}, Train Loss: {metrics['train_loss']:.4f}, Test Loss: {metrics['test_loss']:.4f}"
+                )
 
         # Compile results into DataFrame
         results_df = pd.DataFrame(results)
-        results_df['seed'] = seed
-        results_df['time'] = time.time() - start_time
+        results_df["seed"] = seed
+        results_df["time"] = time.time() - start_time
 
         return results_df
+
 
 # Sena Model class
 class SenaModel(nn.Module):
     def __init__(
         self,
-        mode: str, 
+        mode: str,
         input_size: int,
         latent_size: int,
         nlayers: int,
@@ -200,32 +229,36 @@ class SenaModel(nn.Module):
         super(SenaModel, self).__init__()
         self.mode = mode
         self.encoder_name = encoder_name
-        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = (
+            device
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
         self.nlayers = nlayers
         self.lrelu = nn.LeakyReLU()
 
         if self.mode == "ae":
-       
+
             self.first_layer = NetworkActivityLayer(
-                input_size = input_size,
-                output_size = latent_size,
-                relation_dict = relation_dict,
-                lambda_parameter = lambda_sena,
-                device=self.device
+                input_size=input_size,
+                output_size=latent_size,
+                relation_dict=relation_dict,
+                lambda_parameter=lambda_sena,
+                device=self.device,
             )
             if self.nlayers == 2:
                 self.encoder_hidden = nn.Linear(latent_size, latent_size)
 
         elif self.mode == "vae":
-            
+
             if self.nlayers == 1:
                 self.first_layer = self.encoder_mean = NetworkActivityLayer(
-                                                        input_size = input_size,
-                                                        output_size = latent_size,
-                                                        relation_dict = relation_dict,
-                                                        lambda_parameter = lambda_sena,
-                                                        device=self.device
-                                                        )   
+                    input_size=input_size,
+                    output_size=latent_size,
+                    relation_dict=relation_dict,
+                    lambda_parameter=lambda_sena,
+                    device=self.device,
+                )
                 self.encoder_var = nn.Linear(input_size, latent_size)
             elif self.nlayers == 2:
                 self.encoder_mean = nn.Linear(latent_size, latent_size)
@@ -248,7 +281,7 @@ class SenaModel(nn.Module):
                 x = self.lrelu(self.encoder_hidden(x))
             x = self.decoder(x)
             return x
-        
+
         elif self.mode == "vae":
 
             if self.nlayers == 2:
@@ -265,7 +298,7 @@ class MLPModel(nn.Module):
     def __init__(
         self,
         mode: str,  # 'AE' or 'VAE'
-        encoder_name:str,
+        encoder_name: str,
         input_size: int,
         latent_size: int,
         nlayers: int,
@@ -275,7 +308,11 @@ class MLPModel(nn.Module):
         super(MLPModel, self).__init__()
         self.mode = mode
         self.encoder_name = encoder_name
-        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = (
+            device
+            if device
+            else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
         self.nlayers = nlayers
         self.lambda_l1 = lambda_l1
 
@@ -289,7 +326,9 @@ class MLPModel(nn.Module):
 
         if self.mode == "vae":
             if nlayers == 1:
-                self.first_layer = self.encoder_mean = nn.Linear(input_size, latent_size)
+                self.first_layer = self.encoder_mean = nn.Linear(
+                    input_size, latent_size
+                )
                 self.encoder_var = nn.Linear(input_size, latent_size)
             else:
                 self.encoder_mean = nn.Linear(latent_size, latent_size)
@@ -312,7 +351,7 @@ class MLPModel(nn.Module):
                 x = self.lrelu(self.encoder_hidden(x))
             x = self.decoder(x)
             return x
-        
+
         elif self.mode == "vae":
 
             if self.nlayers == 2:

@@ -12,12 +12,10 @@ from torch.utils.data.sampler import Sampler
 
 
 class Norman2019DataLoader:
-    def __init__(
-        self, num_gene_th=5, batch_size=32, dataname="Norman2019_raw"
-    ):
+    def __init__(self, num_gene_th=5, batch_size=32, dataname="Norman2019_raw"):
         self.num_gene_th = num_gene_th
         self.batch_size = batch_size
-        self.datafile = os.path.join('data',f"{dataname}.h5ad")
+        self.datafile = os.path.join("data", f"{dataname}.h5ad")
 
         # Initialize variables
         self.adata = None
@@ -28,7 +26,7 @@ class Norman2019DataLoader:
         self.rel_dict = None
         self.gene_go_dict = None
         self.ensembl_genename_mapping_rev = None
-        self.gene_var="guide_ids"
+        self.gene_var = "guide_ids"
 
         # Load the dataset
         self.load_norman_2019_dataset()
@@ -252,13 +250,17 @@ class Norman2019DataLoader:
         train_idx = np.array([l for l in range(len(scdataset)) if l not in test_idx])
         return train_idx, test_idx
 
+
 class Wessel2023HEK293DataLoader:
     def __init__(
-        self, num_gene_th=5, batch_size=32, dataname="wessel_dataset/HEK293FT_carpool_processed"
+        self,
+        num_gene_th=5,
+        batch_size=32,
+        dataname="wessel_dataset/HEK293FT_carpool_processed",
     ):
         self.num_gene_th = num_gene_th
         self.batch_size = batch_size
-        self.datafile = os.path.join('data',f"{dataname}.h5ad")
+        self.datafile = os.path.join("data", f"{dataname}.h5ad")
 
         # Initialize variables
         self.adata = None
@@ -269,9 +271,9 @@ class Wessel2023HEK293DataLoader:
         self.rel_dict = None
         self.gene_go_dict = None
         self.ensembl_genename_mapping_rev = None
-        self.gene_var='TargetGenes'
+        self.gene_var = "TargetGenes"
 
-        #initialize dataset
+        # initialize dataset
         self.load_wessel2023_dataset()
 
     def load_wessel2023_dataset(self):
@@ -281,9 +283,9 @@ class Wessel2023HEK293DataLoader:
 
         # Keep only single interventions
         adata = sc.read_h5ad(fpath)
-        adata.obs['TargetGenes'] = adata.obs['TargetGenes'].str.replace("_",",")
-        adata.obs['TargetGenes'] = adata.obs['TargetGenes'].str.replace("NT", "")
-        adata = adata[~adata.obs['TargetGenes'].str.contains(",")]
+        adata.obs["TargetGenes"] = adata.obs["TargetGenes"].str.replace("_", ",")
+        adata.obs["TargetGenes"] = adata.obs["TargetGenes"].str.replace("NT", "")
+        adata = adata[~adata.obs["TargetGenes"].str.contains(",")]
 
         # Build gene sets
         gos, GO_to_ensembl_id_assignment, gene_go_dict = self.load_gene_go_assignments(
@@ -303,7 +305,9 @@ class Wessel2023HEK293DataLoader:
         # Load double perturbation data
         ptb_targets = sorted(adata.obs["TargetGenes"].unique().tolist())[1:]
         double_adata = sc.read_h5ad(fpath).copy()
-        double_adata.obs['TargetGenes'] = double_adata.obs['TargetGenes'].str.replace("_",",")
+        double_adata.obs["TargetGenes"] = double_adata.obs["TargetGenes"].str.replace(
+            "_", ","
+        )
         double_adata = double_adata[
             (double_adata.obs["TargetGenes"].str.contains(","))
             & (
@@ -419,7 +423,7 @@ class Wessel2023HEK293DataLoader:
         return rel_dict
 
     def get_data(self, mode="train"):
-        
+
         assert mode in ["train", "test"], "mode not supported!"
 
         if mode == "train":
@@ -428,7 +432,7 @@ class Wessel2023HEK293DataLoader:
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="single",
-                gene_var='TargetGenes'
+                gene_var="TargetGenes",
             )
             train_idx, test_idx = self.split_scdata(
                 dataset,
@@ -467,7 +471,7 @@ class Wessel2023HEK293DataLoader:
                 double_adata=self.double_adata,
                 ptb_targets=self.ptb_targets,
                 perturb_type="double",
-                gene_var="TargetGenes"
+                gene_var="TargetGenes",
             )
             ptb_genes = dataset.ptb_targets
 
@@ -492,6 +496,7 @@ class Wessel2023HEK293DataLoader:
         train_idx = np.array([l for l in range(len(scdataset)) if l not in test_idx])
         return train_idx, test_idx
 
+
 class SCDataset(Dataset):
     def __init__(
         self,
@@ -499,7 +504,7 @@ class SCDataset(Dataset):
         double_adata,
         ptb_targets,
         perturb_type="single",
-        gene_var = "guide_ids"
+        gene_var="guide_ids",
     ):
         super().__init__()
         assert perturb_type in ["single", "double"], "perturb_type not supported!"
@@ -509,8 +514,7 @@ class SCDataset(Dataset):
 
         if perturb_type == "single":
             ptb_adata = adata[
-                (~adata.obs[gene_var].str.contains(","))
-                & (adata.obs[gene_var] != "")
+                (~adata.obs[gene_var].str.contains(",")) & (adata.obs[gene_var] != "")
             ].copy()
 
             # Keep only cells containing perturbed genes
@@ -550,9 +554,7 @@ class SCDataset(Dataset):
         ]
 
     def __getitem__(self, item):
-        x = torch.from_numpy(
-            self.rand_ctrl_samples[item].toarray().flatten()
-        ).double()
+        x = torch.from_numpy(self.rand_ctrl_samples[item].toarray().flatten()).double()
         y = torch.from_numpy(self.ptb_samples[item].toarray().flatten()).double()
         c = torch.from_numpy(self.ptb_ids[item]).double()
         return x, y, c
@@ -567,6 +569,7 @@ class SCDataset(Dataset):
             feature[[all_ptb_targets.index(i) for i in id.split(",")]] = 1
             ptb_features.append(feature)
         return np.vstack(ptb_features)
+
 
 class SCDATA_sampler(Sampler):
     def __init__(self, scdataset, batchsize, ptb_name=None):
@@ -607,6 +610,7 @@ class SCDATA_sampler(Sampler):
 
 
 """MMD LOSS"""
+
 
 class MMD_loss(nn.Module):
     def __init__(self, kernel_mul=2.0, kernel_num=5, fix_sigma=None):
@@ -656,6 +660,7 @@ class MMD_loss(nn.Module):
         YX = kernels[batch_size:, :batch_size]
         loss = torch.mean(XX + YY - XY - YX)
         return loss
+
 
 # Assuming MMD_loss is defined elsewhere
 class LossFunction:
@@ -710,7 +715,7 @@ class LossFunction:
 
         # MMD loss (or MSE if matched_IO is True)
         MMD = 0 if y_hat is None else matching_function_interv(y_hat, y)
-        
+
         # Mean Squared Error (MSE) loss
         MSE = matching_function_recon(x_recon, x)
 

@@ -68,8 +68,10 @@ def train(
 
     min_train_loss = np.inf
 
-    #init loss function class
-    loss_f = LossFunction(MMD_sigma=opts.MMD_sigma, kernel_num=opts.kernel_num, matched_IO=opts.matched_IO)
+    # init loss function class
+    loss_f = LossFunction(
+        MMD_sigma=opts.MMD_sigma, kernel_num=opts.kernel_num, matched_IO=opts.matched_IO
+    )
 
     # Training loop
     for epoch in range(opts.epochs):
@@ -87,13 +89,7 @@ def train(
                 x, c, c, num_interv=1, temp=temp_schedule[epoch]
             )
             mmd_loss, recon_loss, kl_loss, L1 = loss_f.compute_loss(
-                y_hat,
-                y,
-                x_recon,
-                x,
-                z_mu,
-                z_var,
-                G
+                y_hat, y, x_recon, x, z_mu, z_var, G
             )
             loss = (
                 alpha_schedule[epoch] * mmd_loss

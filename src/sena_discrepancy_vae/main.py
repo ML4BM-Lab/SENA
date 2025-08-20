@@ -65,7 +65,9 @@ def parse_args() -> argparse.Namespace:
         "--model", type=str, default="sena", help="Model to use for training."
     )
     parser.add_argument("--name", type=str, default="example", help="Name of the run.")
-    parser.add_argument("--dataset", type=str, default="Norman2019_reduced", help="Name of the run.")
+    parser.add_argument(
+        "--dataset", type=str, default="Norman2019_reduced", help="Name of the run."
+    )
 
     parser.add_argument("--latdim", type=int, default=105, help="Latent dimension.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
@@ -73,9 +75,7 @@ def parse_args() -> argparse.Namespace:
         "--epochs", type=int, default=100, help="Number of training epochs."
     )
     parser.add_argument("--sena_lambda", type=float, default=0, help="Sena λ value")
-    parser.add_argument(
-        "--log", action='store_true', help="flow server log system"
-    )
+    parser.add_argument("--log", action="store_true", help="flow server log system")
     return parser.parse_args()
 
 
@@ -111,7 +111,7 @@ def main(args: argparse.Namespace) -> None:
         sena_lambda=args.sena_lambda,
         name=args.name,
         dataset_name=args.dataset,
-        log=args.log
+        log=args.log,
     )
 
     logging.info(f"Configuration: {opts}")
@@ -120,9 +120,9 @@ def main(args: argparse.Namespace) -> None:
     set_seeds(opts.seed)
 
     logging.info(f"Loading {opts.dataset_name} dataset")
-    if 'Norman2019' in opts.dataset_name:
+    if "Norman2019" in opts.dataset_name:
         data_handler = Norman2019DataLoader(batch_size=opts.batch_size)
-    elif opts.dataset_name == 'wessel_hefk293':
+    elif opts.dataset_name == "wessel_hefk293":
         data_handler = Wessel2023HEK293DataLoader(batch_size=opts.batch_size)
 
     # Get data from single-gene perturbation

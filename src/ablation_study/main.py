@@ -10,19 +10,39 @@ from evaluator import Evaluator, SenaModel, MLPModel
 from utils import Norman2019DataLoader
 import logging
 
+
 def main():
     # Set up logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
-    
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s"
+    )
+
     parser = argparse.ArgumentParser(description="Autoencoder/VAE Evaluator")
-    parser.add_argument("--mode", type=str, default="ae", choices=["ae", "vae"], help="mode type")
-    parser.add_argument("--encoder_name", type=str, default="sena", choices=["sena", "mlp", "l1"])
-    parser.add_argument("--nseeds", type=int, default=3, help="Number of random seeds to run")
+    parser.add_argument(
+        "--mode", type=str, default="ae", choices=["ae", "vae"], help="mode type"
+    )
+    parser.add_argument(
+        "--encoder_name", type=str, default="sena", choices=["sena", "mlp", "l1"]
+    )
+    parser.add_argument(
+        "--nseeds", type=int, default=3, help="Number of random seeds to run"
+    )
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
-    parser.add_argument("--nlayers", type=int, default=1, help="Number of layers in the model")
-    parser.add_argument("--dataset", type=str, default="Norman2019_raw", help="Dataset to use")
-    parser.add_argument("--num_gene_th", type=int, default=5, help="Number of genes threshold for norman dataset")
-    parser.add_argument("--beta", type=float, default=1.0, help="Beta parameter for VAE")
+    parser.add_argument(
+        "--nlayers", type=int, default=1, help="Number of layers in the model"
+    )
+    parser.add_argument(
+        "--dataset", type=str, default="Norman2019_raw", help="Dataset to use"
+    )
+    parser.add_argument(
+        "--num_gene_th",
+        type=int,
+        default=5,
+        help="Number of genes threshold for norman dataset",
+    )
+    parser.add_argument(
+        "--beta", type=float, default=1.0, help="Beta parameter for VAE"
+    )
     parser.add_argument("--lambda_sena", type=float, default=0, help="Sena λ value")
     parser.add_argument("--lambda_l1", type=float, default=1e-5, help="L1 λ value")
     parser.add_argument("--epochs", type=int, default=250, help="Epochs")
@@ -53,7 +73,11 @@ def main():
 
     # Run evaluator for each seed
     all_results: List[pd.DataFrame] = []
-    logging.info("CUDA available, using GPU" if torch.cuda.is_available() else "CUDA not available, using CPU")
+    logging.info(
+        "CUDA available, using GPU"
+        if torch.cuda.is_available()
+        else "CUDA not available, using CPU"
+    )
 
     for seed in range(args.nseeds):
         logging.info(f"Running evaluation for seed {seed}")
@@ -101,13 +125,11 @@ def main():
 
         # Set up evaluator
         logging.info(f"Setting up evaluator with beta={args.beta}")
-        evaluator = Evaluator(beta = args.beta, epochs = args.epochs, logging = logging)
+        evaluator = Evaluator(beta=args.beta, epochs=args.epochs, logging=logging)
 
         # Run evaluation
         logging.info(f"Starting evaluation for seed {seed}")
-        train_loader = DataLoader(
-            train_data, batch_size=args.batch_size, shuffle=True
-        )
+        train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
         results_df = evaluator.run(
             model=model,
             seed=seed,
@@ -117,13 +139,14 @@ def main():
         logging.info(f"Completed evaluation for seed {seed}")
         all_results.append(results_df)
 
-    #saving
-    fpath = os.path.join(filename,'results_summary.tsv')
+    # saving
+    fpath = os.path.join(filename, "results_summary.tsv")
     logging.info(f"Saving results to {fpath}")
     all_results_df = pd.concat(all_results)
-    all_results_df.to_csv(fpath,sep='\t')
+    all_results_df.to_csv(fpath, sep="\t")
 
     logging.info("Script completed successfully.")
+
 
 if __name__ == "__main__":
     main()
