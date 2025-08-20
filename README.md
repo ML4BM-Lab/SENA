@@ -2,7 +2,7 @@
 
 ## Publications
 
-We are proud to announce that our work on SENA-discrepancy-VAE has accepted for publication at the International Conference on Learning Representations (ICLR) 2025. [OpenReview link](https://openreview.net/forum?id=3Fgylj4uqL)
+We are proud to announce that our work on SENA-discrepancy-VAE has accepted for publication at the International Conference on Learning Representations (ICLR) 2025 ([link](https://openreview.net/forum?id=3Fgylj4uqL)).
 
 ## Overview
 
@@ -150,10 +150,6 @@ If you use SENA-discrepancy-VAE in your research, please cite our work:
     booktitle={The Thirteenth International Conference on Learning Representations}
 }
 ```
-
-**APA:**
-
-de la Fuente Cede\~no, J., Lehmann, R., Ruiz-Arenas, C., Voges, J., Mar\'{\i}n-Go\~ni, I., de Morentin, X. M., ... & Hernaez, M. (2025). Interpretable Causal Representation Learning for Biological Data in the Pathway Space. In The Thirteenth International Conference on Learning Representations.
 
 ## License
 
