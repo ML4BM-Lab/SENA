@@ -4,20 +4,6 @@
 
 We are proud to announce that our work on SENA-discrepancy-VAE has accepted for publication at the International Conference on Learning Representations (ICLR) 2025 ([link](https://openreview.net/forum?id=3Fgylj4uqL)).
 
-## How to Cite
-
-If you use SENA-discrepancy-VAE in your research, please cite our work:
-
-**BibTeX:**
-
-```bibtex
-@inproceedings{deinterpretable,
-    title={Interpretable Causal Representation Learning for Biological Data in the Pathway Space},
-    author={de la Fuente Cede\~no, Jesus and Lehmann, Robert and Ruiz-Arenas, Carlos and Voges, Jan and Mar\'{\i}n-Go\~ni, Irene and de Morentin, Xabier Martinez and Gomez-Cabrero, David and Ochoa, Idoia and Tegn\'er, Jesper and Lagani, Vincenzo and others},
-    booktitle={The Thirteenth International Conference on Learning Representations}
-}
-```
-
 ## Overview
 
 SENA-discrepancy-VAE is a **Causal Representation Learning (CRL)** model designed to predict the impact of genomic and drug perturbations on cellular function by mapping biological processes to latent causal factors. The model improves interpretability by leveraging biological processes (BPs) as prior knowledge, allowing the prediction of unseen perturbations while inferring biologically meaningful causal factors. This method extends the discrepancy-vae (https://github.com/uhlerlab/discrepancy_vae).
@@ -150,6 +136,20 @@ The script accepts several command-line arguments to customize the training proc
 ## Ablation study
 
 Refer to `README_ablation.md` in the `src` folder.
+
+## How to Cite
+
+If you use SENA-discrepancy-VAE in your research, please cite our work:
+
+**BibTeX:**
+
+```bibtex
+@inproceedings{deinterpretable,
+    title={Interpretable Causal Representation Learning for Biological Data in the Pathway Space},
+    author={de la Fuente Cede\~no, Jesus and Lehmann, Robert and Ruiz-Arenas, Carlos and Voges, Jan and Mar\'{\i}n-Go\~ni, Irene and de Morentin, Xabier Martinez and Gomez-Cabrero, David and Ochoa, Idoia and Tegn\'er, Jesper and Lagani, Vincenzo and others},
+    booktitle={The Thirteenth International Conference on Learning Representations}
+}
+```
 
 ## License
 
