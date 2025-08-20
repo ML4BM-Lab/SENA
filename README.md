@@ -1,14 +1,16 @@
-
 # SENA-discrepancy-VAE
+
+## Publications
+
+We are proud to announce that our work on SENA-discrepancy-VAE has accepted for publication at the International Conference on Learning Representations (ICLR) 2025. [OpenReview link](https://openreview.net/forum?id=3Fgylj4uqL)
 
 ## Overview
 
 SENA-discrepancy-VAE is a **Causal Representation Learning (CRL)** model designed to predict the impact of genomic and drug perturbations on cellular function by mapping biological processes to latent causal factors. The model improves interpretability by leveraging biological processes (BPs) as prior knowledge, allowing the prediction of unseen perturbations while inferring biologically meaningful causal factors. This method extends the discrepancy-vae (https://github.com/uhlerlab/discrepancy_vae).
 
-
 <img src="imgs/model_overview.png" alt="Model overview" style="max-width:100%;">
 
-## Abstract 
+## Abstract
 
 <div style="text-align: justify;">
 Predicting the impact of genomic and drug perturbations in cellular function is
@@ -29,35 +31,35 @@ on unseen combinations of interventions that are comparable with its original, n
 counterpart, while inferring causal latent factors that are biologically meaningful.
 </div>
 
-
 ## Usage
 
-1. Clone the repository:
+1.  Clone the repository:
+
     ```bash
     git clone https://github.com/ML4BM-Lab/SENA
     ```
 
-2. The model has been evaluated on a large-scale **Perturb-seq** dataset, 
-which profiles gene expression changes in leukemia cells under genetic perturbations.
-We use the preprocessed version by CPA (https://github.com/facebookresearch/CPA), which 
-we provide in the data folder as a zip file.:
+2.  The model has been evaluated on a large-scale **Perturb-seq** dataset,
+    which profiles gene expression changes in leukemia cells under genetic perturbations.
+    We use the preprocessed version by CPA (https://github.com/facebookresearch/CPA), which
+    we provide in the data folder as a zip file.:
 
-    ```bash
-    wget https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar
-    tar -xvf cpa_binaries.tar
-    cp Norman2019_raw.h5ad data/.
-    rm cpa_binaries.tar
-    ```
+        ```bash
+        wget https://dl.fbaipublicfiles.com/dlp/cpa_binaries.tar
+        tar -xvf cpa_binaries.tar
+        cp Norman2019_raw.h5ad data/.
+        rm cpa_binaries.tar
+        ```
 
-    Alternatively, we have generated a reduced version of this dataset, which you can find as a .zip file in the data folder.
-    This will be the datased used by default.
+        Alternatively, we have generated a reduced version of this dataset, which you can find as a .zip file in the data folder.
+        This will be the datased used by default.
 
-    ```bash
-    #this will generate a Norman2019_reduced.h5ad file
-    unzip Norman2019_reduced.zip
-    ```
+        ```bash
+        #this will generate a Norman2019_reduced.h5ad file
+        unzip Norman2019_reduced.zip
+        ```
 
-3. This project runs in a docker container. Run this code to build the image and to run the container
+3.  This project runs in a docker container. Run this code to build the image and to run the container
 
     ```bash
 
@@ -68,7 +70,7 @@ we provide in the data folder as a zip file.:
     docker build -t <image_name> .
 
     # move to the root directory
-    cd .. 
+    cd ..
 
     # run creating a virtual link to your SENA folder.
     docker run -dt -v .:/wdir/ --gpus all --name <container_name> <image_name>
@@ -77,7 +79,7 @@ we provide in the data folder as a zip file.:
     docker exec -it sena_vae bash
     ```
 
-4. The metrics are reported in a local mlflow server. To run it: 
+4.  The metrics are reported in a local mlflow server. To run it:
 
     ```bash
     # assuming you are placed within the SENA folder and port 5678 is unused
@@ -91,22 +93,21 @@ we provide in the data folder as a zip file.:
 
     ```
 
-    You can now access the server through your browser by typing: ```localhost:5678```. 
+    You can now access the server through your browser by typing: `localhost:5678`.
     **Note:** This script was tested using docker version 27.2.0.
 
-5. Now you can run SENA-discrepancy-VAE by doing: 
+5.  Now you can run SENA-discrepancy-VAE by doing:
 
     ```bash
     python3 src/sena_discrepancy_vae/main.py
     ```
 
-6. Finally, you can retrieve the metrics of the trained model:
+6.  Finally, you can retrieve the metrics of the trained model:
 
     ```bash
     # You can choose the folds to evaluate. (e.g. only double)
     python3 src/sena_discrepancy_vae/inference.py --savedir results/example --evaluation train test double
     ```
-
 
 ### Configuration options
 
@@ -116,8 +117,8 @@ The script accepts several command-line arguments to customize the training proc
 
 - `-s`, `--savedir` (str): Directory to save the results. Default: `'./results/'`. (folder will be created automatically)
 - `--device` (str): Device to run the training on (cpu or cuda). Default: `'cuda:0'`.
-- `--model` (str): Model to use for training, either `'sena'` or `'original'`  Default: `'sena'`.
--  `--dataset` (str): Name of the dataset used. Default: `'Norman2019_reduced'`.
+- `--model` (str): Model to use for training, either `'sena'` or `'original'` Default: `'sena'`.
+- `--dataset` (str): Name of the dataset used. Default: `'Norman2019_reduced'`.
 - `--name` (str): Name of the run, used for organizing output files. Default: `'example'`.
 - `--log` (bool): Whether to use a local mlflow server to visualize training. Default: False.
 - `--seed` (int): Random seed for reproducibility. Default: `42`.
@@ -132,10 +133,27 @@ The script accepts several command-line arguments to customize the training proc
 - `--lr` (float): Learning rate. Default is set within the script (`1e-3`), but can be modified.
 - `--grad_clip` (bool): Whether to apply gradient clipping during training. Default is `False`.
 
-
 ## Ablation study
 
 Refer to `README_ablation.md` in the `src` folder.
+
+## How to Cite
+
+If you use SENA-discrepancy-VAE in your research, please cite our work:
+
+**BibTeX:**
+
+```bibtex
+@inproceedings{deinterpretable,
+    title={Interpretable Causal Representation Learning for Biological Data in the Pathway Space},
+    author={de la Fuente Cede\~no, Jesus and Lehmann, Robert and Ruiz-Arenas, Carlos and Voges, Jan and Mar\'{\i}n-Go\~ni, Irene and de Morentin, Xabier Martinez and Gomez-Cabrero, David and Ochoa, Idoia and Tegn\'er, Jesper and Lagani, Vincenzo and others},
+    booktitle={The Thirteenth International Conference on Learning Representations}
+}
+```
+
+**APA:**
+
+de la Fuente Cede\~no, J., Lehmann, R., Ruiz-Arenas, C., Voges, J., Mar\'{\i}n-Go\~ni, I., de Morentin, X. M., ... & Hernaez, M. (2025). Interpretable Causal Representation Learning for Biological Data in the Pathway Space. In The Thirteenth International Conference on Learning Representations.
 
 ## License
 
