@@ -5,6 +5,7 @@ data/wessel_dataset/THP1_carpool.h5ad
 data/output_pickles/
 data/norman_full/
 data/exploring_discrepancies_norman.ipynb
+analysis/
 
 !imgs/model_overview.png
 
