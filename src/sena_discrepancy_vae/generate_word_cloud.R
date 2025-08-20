@@ -11,7 +11,6 @@
 
 # ------------------------------- Setup --------------------------------------
 
-# Control panel
 rm(list = ls())
 library(tidyverse)
 library(ggplot2)
