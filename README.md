@@ -1,8 +1,6 @@
 # SENA-discrepancy-VAE
 
-## Publications
-
-We are proud to announce that our work on SENA-discrepancy-VAE has accepted for publication at the International Conference on Learning Representations (ICLR) 2025 ([link](https://openreview.net/forum?id=3Fgylj4uqL)).
+We are proud to announce that our work on SENA-discrepancy-VAE has been accepted for publication at the **International Conference on Learning Representations (ICLR) 2025 ([link](https://openreview.net/forum?id=3Fgylj4uqL))**.
 
 ## Overview
 
