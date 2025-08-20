@@ -23,7 +23,7 @@ library(tm)
 library(reticulate)
 
 diff_fc_perc   <- 0.01
-sign_threhold  <- -log10(0.05)  # NOTE: keep original name/typo to preserve logic
+sign_threshold  <- -log10(0.05)
 subsampling    <- 100
 n_latent_factors <- 105
 
@@ -136,7 +136,7 @@ diff_fc_threshold <- quantile(as.matrix(diff_fc_stats), 1 - diff_fc_perc)
 # Zero-out entries failing either criterion
 diff_fc_stats <- as.matrix(diff_fc_stats)
 to_delete <- (diff_fc_stats < diff_fc_threshold) |  # effect size
-             (adj_pvalue_fc_stats < sign_threhold)  # significance (keep variable name)
+             (adj_pvalue_fc_stats < sign_threshold)  # significance
 diff_fc_stats[to_delete] <- 0
 
 # GO -> intervention: pick intervention with max remaining diff per GO
